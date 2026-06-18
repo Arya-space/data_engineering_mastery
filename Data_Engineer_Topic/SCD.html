@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Slowly Changing Dimensions — Data Engineering Guide</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
+
+  :root {
+    --bg:        #0d1117;
+    --surface:   #161b22;
+    --surface2:  #1f2937;
+    --border:    #30363d;
+    --accent:    #58a6ff;
+    --accent2:   #3fb950;
+    --warn:      #f78166;
+    --text:      #e6edf3;
+    --muted:     #8b949e;
+    --mono:      'IBM Plex Mono', monospace;
+    --sans:      'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-weight: 300;
+    line-height: 1.7;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(13,17,23,0.92);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 2rem;
+    height: 52px;
+    overflow-x: auto;
+  }
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-family: var(--mono);
+    padding: 0 1rem;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: color .2s, border-color .2s;
+  }
+  nav a:hover, nav a.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .nav-brand {
+    color: var(--text) !important;
+    font-weight: 600 !important;
+    margin-right: 1rem;
+    border-right: 1px solid var(--border);
+    padding-right: 1.5rem !important;
+  }
+
+  /* HERO */
+  .hero {
+    padding: 5rem 2rem 4rem;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+  .hero-tag {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--accent);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+  .hero h1 {
+    font-size: clamp(2.2rem, 5vw, 3.6rem);
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -.02em;
+    margin-bottom: 1.2rem;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero p {
+    font-size: 1.1rem;
+    color: var(--muted);
+    max-width: 560px;
+    margin-bottom: 2rem;
+  }
+  .pill-row { display: flex; gap: .6rem; flex-wrap: wrap; }
+  .pill {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    padding: .3rem .8rem;
+    border-radius: 2rem;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .pill.green { border-color: var(--accent2); color: var(--accent2); }
+  .pill.blue  { border-color: var(--accent);  color: var(--accent);  }
+
+  /* SECTIONS */
+  section {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 3.5rem 2rem;
+    border-top: 1px solid var(--border);
+  }
+  .section-label {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--muted);
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    margin-bottom: .6rem;
+  }
+  h2 {
+    font-size: 1.7rem;
+    font-weight: 600;
+    margin-bottom: 1.2rem;
+    letter-spacing: -.01em;
+  }
+  h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 1.8rem 0 .6rem;
+    color: var(--accent);
+    font-family: var(--mono);
+  }
+  p { color: var(--muted); margin-bottom: 1rem; }
+  strong { color: var(--text); font-weight: 600; }
+
+  /* CALLOUT */
+  .callout {
+    background: var(--surface);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 6px 6px 0;
+    padding: 1rem 1.2rem;
+    margin: 1.2rem 0;
+    font-size: .92rem;
+    color: var(--text);
+  }
+  .callout.green { border-left-color: var(--accent2); }
+  .callout.warn  { border-left-color: var(--warn); }
+
+  /* TYPE 1 vs TYPE 2 VISUAL */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+  @media(max-width:600px){ .compare-grid { grid-template-columns: 1fr; } }
+  .compare-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.2rem;
+  }
+  .compare-card.active { border-color: var(--accent2); }
+  .compare-title {
+    font-family: var(--mono);
+    font-size: .78rem;
+    font-weight: 600;
+    margin-bottom: .8rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .badge {
+    font-size: .65rem;
+    padding: .15rem .5rem;
+    border-radius: 3px;
+    background: var(--surface2);
+    color: var(--muted);
+  }
+  .badge.bad  { background: #2d1b1b; color: var(--warn); }
+  .badge.good { background: #1b2d1b; color: var(--accent2); }
+
+  /* DATA TABLES */
+  .tbl-wrap { overflow-x: auto; margin: 1rem 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: .8rem;
+  }
+  th {
+    background: var(--surface2);
+    color: var(--muted);
+    font-weight: 600;
+    padding: .5rem .8rem;
+    text-align: left;
+    border: 1px solid var(--border);
+    letter-spacing: .05em;
+    font-size: .7rem;
+    text-transform: uppercase;
+  }
+  td {
+    padding: .45rem .8rem;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+  .highlight td { background: rgba(88,166,255,.08) !important; }
+  .highlight-green td { background: rgba(63,185,80,.08) !important; }
+  .strike td { color: var(--muted); text-decoration: line-through; }
+  td.changed { color: var(--accent2); font-weight: 600; }
+  td.expired { color: var(--warn); }
+  td.active-row { color: var(--accent2); }
+
+  /* CODE BLOCKS */
+  pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.2rem 1.4rem;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: .82rem;
+    line-height: 1.6;
+    margin: 1rem 0;
+  }
+  .kw  { color: #ff7b72; }
+  .fn  { color: #d2a8ff; }
+  .str { color: #a5d6ff; }
+  .cm  { color: #8b949e; font-style: italic; }
+  .num { color: #79c0ff; }
+  .op  { color: var(--accent2); }
+
+  /* TABS */
+  .tab-bar {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1rem;
+    gap: 0;
+  }
+  .tab-btn {
+    font-family: var(--mono);
+    font-size: .78rem;
+    padding: .6rem 1.2rem;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* SQL PLAYGROUND */
+  .playground {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 1.5rem 0;
+  }
+  .playground-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .7rem 1rem;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  .playground-header span {
+    font-family: var(--mono);
+    font-size: .72rem;
+    color: var(--muted);
+  }
+  .run-btn {
+    font-family: var(--mono);
+    font-size: .78rem;
+    padding: .35rem 1rem;
+    background: var(--accent2);
+    color: #0d1117;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: opacity .2s;
+  }
+  .run-btn:hover { opacity: .85; }
+  .run-btn:disabled { opacity: .4; cursor: not-allowed; }
+  textarea.sql-input {
+    width: 100%;
+    background: var(--surface);
+    color: var(--text);
+    border: none;
+    font-family: var(--mono);
+    font-size: .82rem;
+    padding: 1rem 1.2rem;
+    resize: vertical;
+    min-height: 120px;
+    outline: none;
+    line-height: 1.6;
+  }
+  .result-area {
+    border-top: 1px solid var(--border);
+    padding: 1rem 1.2rem;
+    min-height: 60px;
+  }
+  .result-area table { font-size: .78rem; }
+  .result-label {
+    font-family: var(--mono);
+    font-size: .68rem;
+    color: var(--muted);
+    margin-bottom: .6rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+  }
+  .result-error { color: var(--warn); font-family: var(--mono); font-size: .8rem; }
+  .result-empty { color: var(--muted); font-family: var(--mono); font-size: .8rem; }
+
+  /* PIPELINE */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 1.5rem 0;
+    overflow-x: auto;
+    padding-bottom: .5rem;
+  }
+  .pipe-step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: .7rem 1rem;
+    font-family: var(--mono);
+    font-size: .75rem;
+    color: var(--text);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .pipe-step.highlight-step { border-color: var(--accent); color: var(--accent); }
+  .pipe-arrow {
+    color: var(--muted);
+    font-size: 1rem;
+    padding: 0 .4rem;
+    flex-shrink: 0;
+  }
+
+  /* TOOLS GRID */
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: .8rem;
+    margin: 1.2rem 0;
+  }
+  .tool-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+  .tool-name {
+    font-family: var(--mono);
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: .3rem;
+  }
+  .tool-desc { font-size: .8rem; color: var(--muted); }
+
+  /* QUIZ */
+  .quiz-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.4rem;
+    margin: 1rem 0;
+  }
+  .quiz-q { font-weight: 600; margin-bottom: 1rem; color: var(--text); }
+  .quiz-options { display: flex; flex-direction: column; gap: .5rem; }
+  .quiz-opt {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: .6rem 1rem;
+    font-family: var(--mono);
+    font-size: .82rem;
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    transition: border-color .2s, background .2s;
+  }
+  .quiz-opt:hover { border-color: var(--accent); }
+  .quiz-opt.correct { border-color: var(--accent2); background: rgba(63,185,80,.1); color: var(--accent2); }
+  .quiz-opt.wrong   { border-color: var(--warn);   background: rgba(247,129,102,.1); color: var(--warn); }
+  .quiz-feedback { margin-top: .8rem; font-size: .85rem; display: none; }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: .75rem;
+    color: var(--muted);
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="#" class="nav-brand">DE Guide</a>
+  <a href="#concept" class="active">Concept</a>
+  <a href="#ddl">DDL</a>
+  <a href="#dml">DML</a>
+  <a href="#query">Query</a>
+  <a href="#pipeline">Pipeline</a>
+  <a href="#playground">Playground</a>
+  <a href="#quiz">Quiz</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-tag">Data Engineering · Module 01</div>
+  <h1>Slowly Changing<br><span>Dimensions</span></h1>
+  <p>What happens when your data changes? Learn how data engineers handle history, track changes, and query the past.</p>
+  <div class="pill-row">
+    <span class="pill blue">SCD Type 1</span>
+    <span class="pill blue">SCD Type 2</span>
+    <span class="pill green">SQL Playground</span>
+    <span class="pill">dbt · Spark · Fivetran</span>
+  </div>
+</div>
+
+<!-- CONCEPT -->
+<section id="concept">
+  <div class="section-label">Section 01</div>
+  <h2>What is a Slowly Changing Dimension?</h2>
+  <p>Imagine you store employee data in a database. Most days nothing changes — but occasionally an employee moves city, gets promoted, or changes their name. These changes happen <strong>slowly</strong>, but they do happen.</p>
+  <p>The question every data engineer must answer: <strong>what do you do when a row changes?</strong></p>
+
+  <div class="callout">
+    💡 Real example: Chris is an <strong>Owner</strong> on January 1st. On January 2nd, Chris becomes a <strong>Manager</strong>. Do you overwrite the old record, or keep both?
+  </div>
+
+  <h3>// The two approaches</h3>
+  <div class="compare-grid">
+    <div class="compare-card">
+      <div class="compare-title">SCD Type 1 <span class="badge bad">Overwrites history</span></div>
+      <p style="font-size:.85rem; color:var(--muted)">Delete the old value. Replace with the new one. Simple — but history is gone forever.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>id</th><th>name</th><th>role</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Alex</td><td>Chef</td></tr>
+            <tr><td>5</td><td>Chris</td><td class="changed">Manager</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:.75rem; margin-top:.6rem; color:var(--warn)">⚠ "Owner" is gone. No way to know Chris was ever an Owner.</p>
+    </div>
+    <div class="compare-card active">
+      <div class="compare-title">SCD Type 2 <span class="badge good">Keeps full history</span></div>
+      <p style="font-size:.85rem; color:var(--muted)">Add a new row. Keep the old one. Use dates or flags to know which is current.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>id</th><th>role</th><th>start</th><th>end</th></tr></thead>
+          <tbody>
+            <tr class="strike"><td>5</td><td>Owner</td><td>2024-01-01</td><td class="expired">2024-01-02</td></tr>
+            <tr class="highlight-green"><td>5</td><td class="active-row">Manager</td><td>2024-01-02</td><td class="active-row">null</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:.75rem; margin-top:.6rem; color:var(--accent2)">✓ Full history preserved. Query any point in time.</p>
+    </div>
+  </div>
+
+  <h3>// When to use which</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Use Case</th><th>Type 1</th><th>Type 2</th></tr></thead>
+      <tbody>
+        <tr><td>Fixing a typo</td><td style="color:var(--accent2)">✓ Perfect</td><td style="color:var(--muted)">Overkill</td></tr>
+        <tr><td>Employee role change</td><td style="color:var(--warn)">Loses history</td><td style="color:var(--accent2)">✓ Perfect</td></tr>
+        <tr><td>Customer address change</td><td style="color:var(--warn)">Loses history</td><td style="color:var(--accent2)">✓ Perfect</td></tr>
+        <tr><td>Price updates (keep history)</td><td style="color:var(--warn)">✗</td><td style="color:var(--accent2)">✓ Perfect</td></tr>
+        <tr><td>Reporting on past state</td><td style="color:var(--warn)">Impossible</td><td style="color:var(--accent2)">✓ Built for this</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- DDL -->
+<section id="ddl">
+  <div class="section-label">Section 02</div>
+  <h2>DDL — Designing the Table</h2>
+  <p>The magic of SCD Type 2 is in the <strong>columns you add</strong> to a normal table. Here is how you design it.</p>
+
+  <h3>// Basic SCD Type 2 table</h3>
+  <pre><span class="kw">CREATE TABLE</span> customer_dim (
+
+    <span class="cm">-- natural key (not unique — same customer has multiple rows)</span>
+    customer_id      <span class="fn">INT</span>,
+
+    <span class="cm">-- your actual business data</span>
+    name             <span class="fn">VARCHAR</span>(<span class="num">100</span>),
+    city             <span class="fn">VARCHAR</span>(<span class="num">100</span>),
+
+    <span class="cm">-- SCD Type 2 tracking columns ← the key design decision</span>
+    effective_date   <span class="fn">DATE</span>,          <span class="cm">-- when this version became active</span>
+    end_date         <span class="fn">DATE</span>,          <span class="cm">-- when this version expired (null = still active)</span>
+    is_current       <span class="fn">INT</span>,           <span class="cm">-- 1 = active, 0 = historical</span>
+
+    <span class="cm">-- surrogate key: unique per row, even if same customer</span>
+    sk               <span class="fn">VARCHAR</span>(<span class="num">64</span>)    <span class="cm">-- usually an MD5/SHA hash</span>
+);</pre>
+
+  <div class="callout green">
+    💡 <strong>The 9999-12-31 trick:</strong> Instead of using NULL for end_date on active records, many engineers use <code>9999-12-31</code> as a "no end date" sentinel. This makes date comparisons easier — you can always do <code>end_date > @date</code> without null-checking.
+  </div>
+
+  <h3>// The three SCD Type 2 columns explained</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Column</th><th>Purpose</th><th>Active Record</th><th>Historical Record</th></tr></thead>
+      <tbody>
+        <tr><td>effective_date</td><td>When this version started</td><td>2024-01-02</td><td>2024-01-01</td></tr>
+        <tr><td>end_date</td><td>When this version ended</td><td>NULL or 9999-12-31</td><td>2024-01-02</td></tr>
+        <tr><td>is_current</td><td>Quick flag for current row</td><td style="color:var(--accent2)">1</td><td style="color:var(--warn)">0</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>// Surrogate key (SK)</h3>
+  <p>The <strong>natural key</strong> (customer_id) is no longer unique — the same customer has multiple rows. So we generate a <strong>surrogate key</strong>: a hash of the natural key + effective date, guaranteeing uniqueness per version.</p>
+  <pre><span class="cm">-- Example SK generation in SQL</span>
+<span class="kw">SELECT</span> <span class="fn">MD5</span>(customer_id || <span class="str">'-'</span> || effective_date) <span class="kw">AS</span> sk,
+       customer_id, name, city, effective_date, end_date
+<span class="kw">FROM</span> customer_dim;</pre>
+</section>
+
+<!-- DML -->
+<section id="dml">
+  <div class="section-label">Section 03</div>
+  <h2>DML — Loading & Updating Data</h2>
+  <p>Designing the table is step one. Step two is <strong>actually loading changes into it</strong>. Here is the full DML lifecycle.</p>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('dml','insert')">INSERT</button>
+    <button class="tab-btn" onclick="switchTab('dml','update')">UPDATE (expire)</button>
+    <button class="tab-btn" onclick="switchTab('dml','full')">Full change flow</button>
+  </div>
+
+  <div id="dml-insert" class="tab-pane active">
+    <p>When a record first arrives, insert it as the active version.</p>
+    <pre><span class="cm">-- First time we see customer 5</span>
+<span class="kw">INSERT INTO</span> customer_dim
+    (customer_id, name, city, effective_date, end_date, is_current)
+<span class="kw">VALUES</span>
+    (<span class="num">5</span>, <span class="str">'Chris'</span>, <span class="str">'Amsterdam'</span>, <span class="str">'2024-01-01'</span>, <span class="str">'9999-12-31'</span>, <span class="num">1</span>);</pre>
+  </div>
+
+  <div id="dml-update" class="tab-pane">
+    <p>When a change arrives, <strong>expire the old row first</strong>, then insert the new version.</p>
+    <pre><span class="cm">-- Step 1: expire the old record</span>
+<span class="kw">UPDATE</span> customer_dim
+<span class="kw">SET</span>   end_date   = <span class="str">'2024-01-02'</span>,
+      is_current = <span class="num">0</span>
+<span class="kw">WHERE</span> customer_id = <span class="num">5</span>
+  <span class="kw">AND</span> is_current  = <span class="num">1</span>;
+
+<span class="cm">-- Step 2: insert the new active record</span>
+<span class="kw">INSERT INTO</span> customer_dim
+    (customer_id, name, city, effective_date, end_date, is_current)
+<span class="kw">VALUES</span>
+    (<span class="num">5</span>, <span class="str">'Chris'</span>, <span class="str">'Paris'</span>, <span class="str">'2024-01-02'</span>, <span class="str">'9999-12-31'</span>, <span class="num">1</span>);</pre>
+    <div class="callout warn">⚠ Always expire first, then insert. If you do it the other way, you briefly have two active rows for the same customer.</div>
+  </div>
+
+  <div id="dml-full" class="tab-pane">
+    <p>The complete picture — what the table looks like before and after a change:</p>
+    <p style="font-size:.8rem; color:var(--muted); margin-bottom:.4rem;">Before change:</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>customer_id</th><th>name</th><th>city</th><th>effective_date</th><th>end_date</th><th>is_current</th></tr></thead>
+        <tbody>
+          <tr><td>5</td><td>Chris</td><td>Amsterdam</td><td>2024-01-01</td><td>9999-12-31</td><td style="color:var(--accent2)">1</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:.8rem; color:var(--muted); margin: 1rem 0 .4rem;">After Chris moves to Paris on 2024-01-02:</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>customer_id</th><th>name</th><th>city</th><th>effective_date</th><th>end_date</th><th>is_current</th></tr></thead>
+        <tbody>
+          <tr class="strike"><td>5</td><td>Chris</td><td>Amsterdam</td><td>2024-01-01</td><td class="expired">2024-01-02</td><td style="color:var(--warn)">0</td></tr>
+          <tr class="highlight-green"><td>5</td><td>Chris</td><td class="changed">Paris</td><td>2024-01-02</td><td>9999-12-31</td><td class="active-row">1</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- QUERY -->
+<section id="query">
+  <div class="section-label">Section 04</div>
+  <h2>Querying SCD Type 2</h2>
+  <p>The most common SCD query: <strong>get the version of a record that was active at a specific point in time.</strong></p>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('query','sql')">SQL</button>
+    <button class="tab-btn" onclick="switchTab('query','pyspark')">PySpark</button>
+    <button class="tab-btn" onclick="switchTab('query','python')">Python / Pandas</button>
+  </div>
+
+  <div id="query-sql" class="tab-pane active">
+    <pre><span class="cm">-- Get the record valid at a specific date</span>
+<span class="kw">SELECT</span> customer_id, name, city, effective_date, end_date
+<span class="kw">FROM</span>   customer_dim
+<span class="kw">WHERE</span>  effective_date <span class="op">&lt;=</span> <span class="str">'2024-03-01'</span>   <span class="cm">-- started on or before our date</span>
+  <span class="kw">AND</span>  end_date       <span class="op">&gt;</span>  <span class="str">'2024-03-01'</span>   <span class="cm">-- not yet expired on our date</span>
+<span class="kw">ORDER BY</span> customer_id;</pre>
+    <div class="callout">
+      🧠 <strong>Why both conditions?</strong><br>
+      <code>effective_date &lt;= @date</code> — the record had already started.<br>
+      <code>end_date &gt; @date</code> — the record had not yet ended.
+    </div>
+  </div>
+
+  <div id="query-pyspark" class="tab-pane">
+    <pre><span class="kw">from</span> pyspark.sql <span class="kw">import</span> SparkSession
+<span class="kw">from</span> pyspark.sql.functions <span class="kw">import</span> col
+
+spark = SparkSession.builder.getOrCreate()
+query_date = <span class="str">"2024-03-01"</span>
+
+result = customer_dim \
+    .filter(
+        (col(<span class="str">"effective_date"</span>) <span class="op">&lt;=</span> query_date) <span class="op">&amp;</span>   <span class="cm"># ← brackets required!</span>
+        (col(<span class="str">"end_date"</span>)       <span class="op">&gt;</span>  query_date)
+    ) \
+    .select(<span class="str">"customer_id"</span>, <span class="str">"name"</span>, <span class="str">"city"</span>, <span class="str">"effective_date"</span>, <span class="str">"end_date"</span>) \
+    .orderBy(<span class="str">"customer_id"</span>)
+
+result.show()</pre>
+    <div class="callout warn">⚠ <strong>Common bug:</strong> In PySpark, every condition in <code>.filter()</code> must be wrapped in its own parentheses when using <code>&amp;</code>. Missing brackets causes a silent logic error.</div>
+  </div>
+
+  <div id="query-python" class="tab-pane">
+    <pre><span class="kw">import</span> pandas <span class="kw">as</span> pd
+
+query_date = pd.Timestamp(<span class="str">"2024-03-01"</span>)
+
+result = customer_dim[
+    (customer_dim[<span class="str">"effective_date"</span>] <span class="op">&lt;=</span> query_date) <span class="op">&amp;</span>
+    (customer_dim[<span class="str">"end_date"</span>]       <span class="op">&gt;</span>  query_date)
+][[<span class="str">"customer_id"</span>, <span class="str">"name"</span>, <span class="str">"city"</span>, <span class="str">"effective_date"</span>, <span class="str">"end_date"</span>]] \
+ .sort_values(<span class="str">"customer_id"</span>)
+
+print(result)</pre>
+  </div>
+</section>
+
+<!-- PIPELINE -->
+<section id="pipeline">
+  <div class="section-label">Section 05</div>
+  <h2>Where Does SCD Fit in the Pipeline?</h2>
+  <p>SCD Type 2 tables live in the <strong>Silver / Dimension layer</strong> of a modern data stack — after raw ingestion, before analytics.</p>
+
+  <h3>// Batch pipeline</h3>
+  <div class="pipeline">
+    <div class="pipe-step">Source</div><div class="pipe-arrow">→</div>
+    <div class="pipe-step">Ingestion</div><div class="pipe-arrow">→</div>
+    <div class="pipe-step">Raw / Bronze</div><div class="pipe-arrow">→</div>
+    <div class="pipe-step highlight-step">Transform → SCD Type 2</div><div class="pipe-arrow">→</div>
+    <div class="pipe-step">Serving / Gold</div>
+  </div>
+
+  <h3>// Streaming pipeline</h3>
+  <div class="pipeline">
+    <div class="pipe-step">Source</div><div class="pipe-arrow">→</div>
+    <div class="pipe-step">CDC</div><div class="pipe-arrow">→</div>
+    <div class="pipe-step">Message Queue</div><div class="pipe-arrow">→</div>
+    <div class="pipe-step highlight-step">Stream Processor → SCD Type 2</div><div class="pipe-arrow">→</div>
+    <div class="pipe-step">Serving / Gold</div>
+  </div>
+
+  <div class="callout">
+    💡 <strong>Batch vs Streaming:</strong> Most companies use batch (daily/hourly runs). Streaming is only needed when you need changes reflected in minutes or seconds — it's significantly more complex.
+  </div>
+
+  <h3>// Example tools at each stage</h3>
+  <div class="tools-grid">
+    <div class="tool-card">
+      <div class="tool-name">Fivetran / Airbyte</div>
+      <div class="tool-desc">Ingestion. Pulls data from source systems. Some handle SCD automatically.</div>
+    </div>
+    <div class="tool-card">
+      <div class="tool-name">dbt snapshot</div>
+      <div class="tool-desc">Most common way to build SCD Type 2. One config file handles everything.</div>
+    </div>
+    <div class="tool-card">
+      <div class="tool-name">Apache Spark</div>
+      <div class="tool-desc">For large-scale transformations. Manual MERGE logic required.</div>
+    </div>
+    <div class="tool-card">
+      <div class="tool-name">Delta Lake</div>
+      <div class="tool-desc">Storage layer with MERGE INTO support. Works well with Spark.</div>
+    </div>
+    <div class="tool-card">
+      <div class="tool-name">Debezium</div>
+      <div class="tool-desc">CDC tool. Streams row-level changes from source DBs in real time.</div>
+    </div>
+    <div class="tool-card">
+      <div class="tool-name">Snowflake / BigQuery</div>
+      <div class="tool-desc">The warehouse where your SCD table lives. Both support MERGE natively.</div>
+    </div>
+  </div>
+
+  <h3>// dbt snapshot (simplest production approach)</h3>
+  <pre><span class="cm">-- snapshots/customer_snapshot.sql</span>
+{% snapshot customer_snapshot %}
+
+  {{
+    config(
+      target_schema=<span class="str">'snapshots'</span>,
+      unique_key=<span class="str">'customer_id'</span>,
+      strategy=<span class="str">'timestamp'</span>,
+      updated_at=<span class="str">'updated_at'</span>,
+    )
+  }}
+
+  <span class="kw">SELECT</span> * <span class="kw">FROM</span> {{ source(<span class="str">'raw'</span>, <span class="str">'customers'</span>) }}
+
+{% endsnapshot %}</pre>
+  <p>Run with: <code style="color:var(--accent); font-family:var(--mono)">dbt snapshot</code> — dbt handles the expire + insert logic automatically.</p>
+</section>
+
+<!-- PLAYGROUND -->
+<section id="playground">
+  <div class="section-label">Section 06</div>
+  <h2>Try It Yourself</h2>
+  <p>A real SQLite database is running in your browser. The <code>customer_dim</code> table is preloaded with sample SCD Type 2 data. Write and run any query below.</p>
+
+  <div class="playground">
+    <div class="playground-header">
+      <span>SQLite · customer_dim</span>
+      <button class="run-btn" id="run-btn" onclick="runQuery()">▶ Run</button>
+    </div>
+    <textarea class="sql-input" id="sql-input" spellcheck="false">SELECT customer_id, name, city, effective_date, end_date, is_current
+FROM customer_dim
+ORDER BY customer_id, effective_date;</textarea>
+    <div class="result-area" id="result-area">
+      <div class="result-empty">Loading database...</div>
+    </div>
+  </div>
+
+  <h3>// Try these queries</h3>
+  <div style="display:flex; flex-direction:column; gap:.5rem; margin-top:.5rem;">
+    <button class="quiz-opt" onclick="setQuery(`-- Who was active on 2024-03-01?\nSELECT customer_id, name, city, effective_date, end_date\nFROM customer_dim\nWHERE effective_date <= '2024-03-01'\n  AND end_date > '2024-03-01'\nORDER BY customer_id;`)">📅 Query at a specific point in time</button>
+    <button class="quiz-opt" onclick="setQuery(`-- Show only current records\nSELECT customer_id, name, city, effective_date\nFROM customer_dim\nWHERE is_current = 1\nORDER BY customer_id;`)">✅ Show only current records</button>
+    <button class="quiz-opt" onclick="setQuery(`-- Show full history for customer 3\nSELECT customer_id, name, city, effective_date, end_date, is_current\nFROM customer_dim\nWHERE customer_id = 3\nORDER BY effective_date;`)">🔍 Full history for one customer</button>
+    <button class="quiz-opt" onclick="setQuery(`-- Count how many versions each customer has\nSELECT customer_id, name, COUNT(*) as versions\nFROM customer_dim\nGROUP BY customer_id, name\nORDER BY versions DESC;`)">📊 How many versions per customer?</button>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz">
+  <div class="section-label">Section 07</div>
+  <h2>Test Yourself</h2>
+
+  <div class="quiz-card">
+    <div class="quiz-q">Q1. Chris was in Amsterdam from Jan 1 to Jan 2, then moved to Paris. You query with <code>effective_date &lt;= '2024-01-01' AND end_date &gt; '2024-01-01'</code>. What city do you get?</div>
+    <div class="quiz-options">
+      <button class="quiz-opt" onclick="answer(this, false, 'Paris was not active until Jan 2nd.')">Paris</button>
+      <button class="quiz-opt" onclick="answer(this, true, 'Correct! The Amsterdam record was active on Jan 1st.')">Amsterdam</button>
+      <button class="quiz-opt" onclick="answer(this, false, 'The query returns exactly one row per customer for the given date.')">Both</button>
+    </div>
+    <div class="quiz-feedback"></div>
+  </div>
+
+  <div class="quiz-card">
+    <div class="quiz-q">Q2. What is the main advantage of using <code>9999-12-31</code> instead of NULL for active records?</div>
+    <div class="quiz-options">
+      <button class="quiz-opt" onclick="answer(this, false, 'NULL actually takes less storage than a date value.')">It saves storage</button>
+      <button class="quiz-opt" onclick="answer(this, true, 'Correct! Date comparisons like end_date > @date work without special NULL handling.')">Date comparisons work without NULL checks</button>
+      <button class="quiz-opt" onclick="answer(this, false, 'NULL is technically valid for end_date too.')">NULL is not allowed in DATE columns</button>
+    </div>
+    <div class="quiz-feedback"></div>
+  </div>
+
+  <div class="quiz-card">
+    <div class="quiz-q">Q3. In the DML update process, what is the correct order of operations?</div>
+    <div class="quiz-options">
+      <button class="quiz-opt" onclick="answer(this, false, 'Inserting first would briefly give you two active rows for the same customer.')">Insert new row → then expire old row</button>
+      <button class="quiz-opt" onclick="answer(this, true, 'Correct! Always expire the old record first, then insert the new active one.')">Expire old row → then insert new row</button>
+      <button class="quiz-opt" onclick="answer(this, false, 'You should never delete rows in SCD Type 2 — that defeats the purpose.')">Delete old row → insert new row</button>
+    </div>
+    <div class="quiz-feedback"></div>
+  </div>
+</section>
+
+<footer>
+  Built for learning · Data Engineering Guide · <a href="#">GitHub</a>
+</footer>
+
+<script>
+// ── TAB SWITCHER ──────────────────────────────────────────
+function switchTab(group, tab) {
+  document.querySelectorAll(`[id^="${group}-"]`).forEach(el => el.classList.remove('active'));
+  document.getElementById(`${group}-${tab}`).classList.add('active');
+  event.target.closest('.tab-bar').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+// ── QUIZ ──────────────────────────────────────────────────
+function answer(btn, correct, feedback) {
+  const card = btn.closest('.quiz-card');
+  card.querySelectorAll('.quiz-opt').forEach(b => b.disabled = true);
+  btn.classList.add(correct ? 'correct' : 'wrong');
+  const fb = card.querySelector('.quiz-feedback');
+  fb.style.display = 'block';
+  fb.style.color = correct ? 'var(--accent2)' : 'var(--warn)';
+  fb.textContent = (correct ? '✓ ' : '✗ ') + feedback;
+}
+
+// ── SQL PLAYGROUND ────────────────────────────────────────
+let db = null;
+
+function setQuery(sql) {
+  document.getElementById('sql-input').value = sql;
+  runQuery();
+}
+
+function runQuery() {
+  if (!db) { showResult('<span class="result-empty">Database still loading...</span>'); return; }
+  const sql = document.getElementById('sql-input').value.trim();
+  if (!sql) return;
+  try {
+    const results = db.exec(sql);
+    if (!results.length) {
+      showResult('<div class="result-empty">Query ran successfully. No rows returned.</div>');
+      return;
+    }
+    const { columns, values } = results[0];
+    let html = '<div class="result-label">Result — ' + values.length + ' row' + (values.length !== 1 ? 's' : '') + '</div>';
+    html += '<div class="tbl-wrap"><table><thead><tr>';
+    columns.forEach(c => html += `<th>${c}</th>`);
+    html += '</tr></thead><tbody>';
+    values.forEach(row => {
+      html += '<tr>';
+      row.forEach(v => html += `<td>${v === null ? '<span style="color:var(--muted)">null</span>' : v}</td>`);
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    showResult(html);
+  } catch (e) {
+    showResult(`<div class="result-error">Error: ${e.message}</div>`);
+  }
+}
+
+function showResult(html) {
+  document.getElementById('result-area').innerHTML = html;
+}
+
+// initialise SQL.js and seed data
+async function initDB() {
+  try {
+    const SQL = await initSqlJs({
+      locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/${file}`
+    });
+    db = new SQL.Database();
+
+    db.run(`
+      CREATE TABLE customer_dim (
+        customer_id    INTEGER,
+        name           TEXT,
+        city           TEXT,
+        effective_date TEXT,
+        end_date       TEXT,
+        is_current     INTEGER
+      );
+      INSERT INTO customer_dim VALUES
+        (1, 'Alice',   'New York',    '2024-01-01', '9999-12-31', 1),
+        (2, 'Bob',     'London',      '2024-01-01', '9999-12-31', 1),
+        (3, 'Chris',   'Amsterdam',   '2024-01-01', '2024-02-15', 0),
+        (3, 'Chris',   'Paris',       '2024-02-15', '9999-12-31', 1),
+        (4, 'Diana',   'Berlin',      '2024-01-01', '2024-03-20', 0),
+        (4, 'Diana',   'Munich',      '2024-03-20', '2024-05-01', 0),
+        (4, 'Diana',   'Vienna',      '2024-05-01', '9999-12-31', 1),
+        (5, 'Edward',  'Sydney',      '2024-01-01', '9999-12-31', 1);
+    `);
+
+    showResult('<div class="result-empty">Database ready. Hit ▶ Run to execute your query.</div>');
+    document.getElementById('run-btn').disabled = false;
+  } catch (e) {
+    showResult(`<div class="result-error">Failed to load database: ${e.message}</div>`);
+  }
+}
+
+initDB();
+
+// ── NAV ACTIVE STATE ──────────────────────────────────────
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('nav a[href^="#"]');
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => { if (window.scrollY >= s.offsetTop - 80) current = s.id; });
+  navLinks.forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+  });
+});
+</script>
+</body>
+</html>
