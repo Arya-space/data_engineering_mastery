@@ -974,7 +974,8 @@ const simScenarios=[
     scenario:'A new data source (Salesforce CRM) needs to be ingested daily.',
     question:'Which ingestion pattern do you choose first?',
     opts:[
-      {l:'Build a custom Salesforce API connector from scratch',correct:false,fb:'Reinventing the wheel. Managed tools like Fivetran already handle Salesforce perfectly.'}      {l:'Use Fivetran or Airbyte — they have native Salesforce connectors',correct:true,fb:'Correct. Always check if a managed connector exists before building. Saves weeks of work.'},
+      {l:'Build a custom Salesforce API connector from scratch',correct:false,fb:'Reinventing the wheel. Managed tools like Fivetran already handle Salesforce perfectly.'},
+      {l:'Use Fivetran or Airbyte — they have native Salesforce connectors',correct:true,fb:'Correct. Always check if a managed connector exists before building. Saves weeks of work.'},
       {l:'Set up CDC with Debezium',correct:false,fb:'Debezium is for databases with transaction logs, not SaaS APIs like Salesforce.'},
       {l:'Full load every hour',correct:false,fb:'Hourly full loads of Salesforce would hit API rate limits fast. Use a managed connector.'}
     ]
