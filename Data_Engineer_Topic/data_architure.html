@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Pipelines & Architecture — DE Guide</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1f2937;--border:#30363d;
+  --blue:#58a6ff;--purple:#bc8cff;--amber:#e3b341;--green:#3fb950;
+  --warn:#f78166;--bronze:#cd7f32;--silver:#8b949e;
+  --text:#e6edf3;--muted:#8b949e;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:300;line-height:1.7;}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:100;background:rgba(13,17,23,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1.5rem;height:52px;overflow-x:auto;gap:0;}
+nav a{color:var(--muted);text-decoration:none;font-size:.72rem;font-family:var(--mono);padding:0 .8rem;height:52px;display:flex;align-items:center;border-bottom:2px solid transparent;white-space:nowrap;transition:color .2s,border-color .2s;}
+nav a:hover,nav a.active{color:var(--blue);border-bottom-color:var(--blue);}
+.nav-brand{color:var(--text)!important;font-weight:600!important;border-right:1px solid var(--border);padding-right:1rem!important;margin-right:.3rem;}
+
+/* HERO */
+.hero{padding:5rem 2rem 4rem;max-width:900px;margin:0 auto;}
+.hero-tag{font-family:var(--mono);font-size:.68rem;color:var(--blue);letter-spacing:.14em;text-transform:uppercase;margin-bottom:1rem;}
+.hero h1{font-size:clamp(2rem,5vw,3.4rem);font-weight:600;line-height:1.15;letter-spacing:-.02em;margin-bottom:1rem;}
+.hero h1 span{color:var(--blue);}
+.hero p{color:var(--muted);max-width:540px;margin-bottom:1.5rem;}
+.pill-row{display:flex;gap:.5rem;flex-wrap:wrap;}
+.pill{font-family:var(--mono);font-size:.68rem;padding:.25rem .7rem;border-radius:2rem;border:1px solid var(--border);color:var(--muted);}
+.pill.blue{border-color:var(--blue);color:var(--blue);}
+.pill.green{border-color:var(--green);color:var(--green);}
+
+/* SECTIONS */
+section{max-width:900px;margin:0 auto;padding:3rem 2rem;border-top:1px solid var(--border);}
+.sec-label{font-family:var(--mono);font-size:.65rem;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:.5rem;}
+h2{font-size:1.6rem;font-weight:600;margin-bottom:.8rem;letter-spacing:-.01em;}
+h2 span{color:var(--blue);}
+h3{font-size:.95rem;font-weight:600;margin:1.5rem 0 .5rem;color:var(--blue);font-family:var(--mono);}
+p{color:var(--muted);margin-bottom:.8rem;}
+strong{color:var(--text);font-weight:600;}
+code{font-family:var(--mono);font-size:.8rem;color:var(--blue);background:var(--surface);padding:.1rem .4rem;border-radius:3px;}
+.callout{background:var(--surface);border-left:3px solid var(--blue);border-radius:0 6px 6px 0;padding:.9rem 1.1rem;margin:1rem 0;font-size:.88rem;color:var(--text);}
+.callout.green{border-left-color:var(--green);}
+.callout.warn{border-left-color:var(--warn);}
+.callout.amber{border-left-color:var(--amber);}
+.tbl-wrap{overflow-x:auto;margin:1rem 0;}
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.78rem;}
+th{background:var(--surface2);color:var(--muted);padding:.45rem .8rem;border:1px solid var(--border);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;text-align:left;}
+td{padding:.4rem .8rem;border:1px solid var(--border);color:var(--text);}
+tr:nth-child(even) td{background:rgba(255,255,255,.02);}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0;}
+@media(max-width:600px){.grid2{grid-template-columns:1fr;}}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin:1rem 0;}
+@media(max-width:700px){.grid3{grid-template-columns:1fr;}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.1rem;}
+.card.hl{border-color:var(--blue);}
+.card-title{font-family:var(--mono);font-size:.82rem;font-weight:600;color:var(--blue);margin-bottom:.5rem;}
+.tag{font-family:var(--mono);font-size:.65rem;padding:.15rem .5rem;border-radius:3px;display:inline-block;margin:.15rem .1rem;}
+.tag.good{background:rgba(63,185,80,.12);color:var(--green);}
+.tag.bad{background:rgba(247,129,102,.12);color:var(--warn);}
+.tag.neutral{background:rgba(88,166,255,.1);color:var(--blue);}
+
+/* TABS */
+.tab-bar{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:1rem;overflow-x:auto;}
+.tab-btn{font-family:var(--mono);font-size:.76rem;padding:.55rem 1rem;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .2s;}
+.tab-btn.active{color:var(--blue);border-bottom-color:var(--blue);}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+
+/* SVG DIAGRAMS */
+.diagram-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:1rem 0;}
+.diagram-header{display:flex;align-items:center;justify-content:space-between;padding:.6rem 1rem;background:var(--surface2);border-bottom:1px solid var(--border);font-family:var(--mono);font-size:.7rem;color:var(--muted);}
+.diagram-scroll{overflow-x:auto;padding:.5rem;}
+svg.diag{overflow:visible;}
+.legend{display:flex;gap:1rem;flex-wrap:wrap;padding:.6rem 1rem;border-top:1px solid var(--border);}
+.leg-item{display:flex;align-items:center;gap:.4rem;font-family:var(--mono);font-size:.7rem;color:var(--muted);}
+.leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+
+/* STACK TABS */
+.stack-tabs{display:flex;gap:.4rem;flex-wrap:wrap;padding:.8rem 1rem;border-bottom:1px solid var(--border);background:var(--surface2);}
+.stack-tab{font-family:var(--mono);font-size:.72rem;padding:.35rem .8rem;border-radius:5px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;transition:all .2s;}
+.stack-tab:hover{border-color:var(--blue);color:var(--text);}
+.stack-tab.active{border-color:var(--blue);background:rgba(88,166,255,.1);color:var(--blue);}
+
+/* DECISION TOOL */
+.decision-tool{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:1rem 0;}
+.dt-header{padding:.8rem 1.2rem;background:var(--surface2);border-bottom:1px solid var(--border);font-family:var(--mono);font-size:.75rem;color:var(--muted);}
+.dt-body{padding:1.2rem;}
+.dt-q{font-weight:600;color:var(--text);margin-bottom:.8rem;}
+.dt-opts{display:flex;flex-direction:column;gap:.4rem;}
+.dt-opt{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.55rem 1rem;font-family:var(--mono);font-size:.8rem;color:var(--text);cursor:pointer;text-align:left;transition:all .2s;}
+.dt-opt:hover{border-color:var(--blue);background:rgba(88,166,255,.06);}
+.dt-opt.sel{border-color:var(--blue);background:rgba(88,166,255,.1);color:var(--blue);}
+.dt-result{margin-top:1rem;padding:1rem;background:rgba(63,185,80,.06);border:1px solid var(--green);border-radius:6px;display:none;}
+.dt-result-title{font-family:var(--mono);font-size:.85rem;font-weight:600;color:var(--green);margin-bottom:.4rem;}
+.dt-result-why{font-size:.82rem;color:var(--muted);}
+.dt-back{font-family:var(--mono);font-size:.72rem;color:var(--muted);background:none;border:none;cursor:pointer;margin-top:.8rem;padding:.3rem 0;}
+.dt-back:hover{color:var(--text);}
+
+/* INTERVIEW SIM */
+.sim-scenario{background:var(--surface2);border:1px solid var(--amber);border-radius:8px;padding:1rem 1.2rem;margin-bottom:1rem;font-size:.88rem;}
+.sim-scenario-label{font-family:var(--mono);font-size:.65rem;color:var(--amber);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.4rem;}
+.sim-opts{display:flex;flex-direction:column;gap:.4rem;margin-bottom:1rem;}
+.sim-opt{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.55rem 1rem;font-family:var(--mono);font-size:.8rem;color:var(--text);cursor:pointer;text-align:left;transition:all .2s;}
+.sim-opt:hover{border-color:var(--amber);}
+.sim-opt.correct{border-color:var(--green);background:rgba(63,185,80,.1);color:var(--green);}
+.sim-opt.wrong{border-color:var(--warn);background:rgba(247,129,102,.08);color:var(--warn);}
+.sim-feedback{font-size:.83rem;padding:.8rem 1rem;border-radius:6px;display:none;margin-bottom:.8rem;}
+.sim-next{font-family:var(--mono);font-size:.75rem;padding:.4rem 1rem;background:var(--blue);color:#0d1117;border:none;border-radius:5px;cursor:pointer;font-weight:600;display:none;}
+
+/* PRINCIPLE CARDS */
+.principle{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.2rem;margin-bottom:1rem;}
+.principle-num{font-family:var(--mono);font-size:.65rem;color:var(--muted);margin-bottom:.3rem;}
+.principle-title{font-size:1rem;font-weight:600;color:var(--text);margin-bottom:.5rem;}
+.principle-body{font-size:.85rem;color:var(--muted);}
+pre{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1rem 1.2rem;font-family:var(--mono);font-size:.78rem;overflow-x:auto;margin:.8rem 0;line-height:1.6;}
+.kw{color:#ff7b72;}.fn{color:#d2a8ff;}.str{color:#a5d6ff;}.cm{color:#8b949e;font-style:italic;}
+
+/* TOOLTIP */
+#tip{position:fixed;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.5rem .8rem;font-family:var(--mono);font-size:.73rem;color:var(--text);pointer-events:none;display:none;z-index:999;max-width:220px;line-height:1.5;}
+
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;font-family:var(--mono);font-size:.72rem;color:var(--muted);}
+footer a{color:var(--blue);text-decoration:none;}
+</style>
+</head>
+<body>
+<div id="tip"></div>
+
+<nav>
+  <a href="#" class="nav-brand">DE Guide</a>
+  <a href="#what">What is a Pipeline</a>
+  <a href="#etl">ETL vs ELT</a>
+  <a href="#batch">Batch vs Stream</a>
+  <a href="#ingestion">Ingestion</a>
+  <a href="#arch">Architecture</a>
+  <a href="#storage">Lakes vs DW</a>
+  <a href="#principles">Principles</a>
+  <a href="#contracts">Contracts</a>
+  <a href="#monitoring">Monitoring</a>
+  <a href="#stacks">Real Stacks</a>
+  <a href="#interviews">Interviews</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-tag">Data Engineering · Module 03</div>
+  <h1>Data Pipelines &<br><span>Architecture</span></h1>
+  <p>How data moves from source to destination — and what the overall system looks like at every scale.</p>
+  <div class="pill-row">
+    <span class="pill blue">ETL vs ELT</span>
+    <span class="pill blue">Medallion</span>
+    <span class="pill blue">Lambda / Kappa</span>
+    <span class="pill green">Interactive diagrams</span>
+    <span class="pill green">Interview simulator</span>
+  </div>
+</div>
+
+<!-- ─── 1. WHAT IS A PIPELINE ─── -->
+<section id="what">
+  <div class="sec-label">Section 01</div>
+  <h2>What is a <span>Data Pipeline?</span></h2>
+  <p>A data pipeline is a series of steps that <strong>move and transform data</strong> from where it's created to where it's used — automatically, reliably, and at scale.</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-header"><span>Core pipeline flow</span></div>
+    <div class="diagram-scroll"><svg class="diag" viewBox="0 0 700 80" style="width:100%;min-width:500px;" id="svg-core"></svg></div>
+  </div>
+
+  <h3>// Pipeline vs Workflow</h3>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Data Pipeline</div>
+      <p style="font-size:.83rem;">Focused on <strong>moving and transforming data</strong>. Source → transform → destination. Triggered by schedule or event.</p>
+      <p style="font-size:.78rem;color:var(--muted);">e.g. Load Postgres → clean → write to Snowflake every hour</p>
+    </div>
+    <div class="card hl">
+      <div class="card-title">Workflow / Orchestration</div>
+      <p style="font-size:.83rem;">Manages <strong>dependencies between tasks</strong>. Knows what runs first, handles failures, retries, alerts.</p>
+      <p style="font-size:.78rem;color:var(--muted);">e.g. Airflow DAG: task A → task B → task C, with retry on failure</p>
+    </div>
+  </div>
+
+  <h3>// Why pipelines fail</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Failure type</th><th>Cause</th><th>Prevention</th></tr></thead>
+    <tbody>
+      <tr><td>Schema change</td><td>Source adds/removes a column unexpectedly</td><td>Data contracts, schema registry</td></tr>
+      <tr><td>Volume spike</td><td>10x more data than expected arrives</td><td>Partitioning, auto-scaling</td></tr>
+      <tr><td>Late data</td><td>Events arrive hours after they happened</td><td>Watermarks, grace periods</td></tr>
+      <tr><td>Duplicate data</td><td>At-least-once delivery causes re-processing</td><td>Idempotency, deduplication</td></tr>
+      <tr><td>Dependency failure</td><td>Upstream table not ready when job runs</td><td>Sensors, SLA monitoring</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ─── 2. ETL vs ELT ─── -->
+<section id="etl">
+  <div class="sec-label">Section 02</div>
+  <h2>ETL vs <span>ELT</span></h2>
+  <p>The biggest shift in modern data engineering. Understanding this changes how you design every pipeline.</p>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('etl','concept',this)">Concept</button>
+    <button class="tab-btn" onclick="tab('etl','diagram',this)">Diagram</button>
+    <button class="tab-btn" onclick="tab('etl','when',this)">When to use</button>
+  </div>
+
+  <div id="etl-concept" class="tab-pane active">
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">ETL — Extract Transform Load</div>
+        <p style="font-size:.83rem;">Transform data <strong>before</strong> loading it. Traditional approach — data warehouse must receive clean data.</p>
+        <div style="margin:.8rem 0;font-family:var(--mono);font-size:.78rem;color:var(--muted);">Source → [Transform outside] → Warehouse</div>
+        <span class="tag good">Data integrity</span><span class="tag bad">Rigid</span><span class="tag bad">Slow to change</span>
+      </div>
+      <div class="card hl">
+        <div class="card-title">ELT — Extract Load Transform</div>
+        <p style="font-size:.83rem;">Load raw data first, transform <strong>inside</strong> the warehouse. Modern approach — warehouses are powerful enough.</p>
+        <div style="margin:.8rem 0;font-family:var(--mono);font-size:.78rem;color:var(--muted);">Source → Warehouse (raw) → [Transform inside]</div>
+        <span class="tag good">Flexible</span><span class="tag good">Raw data preserved</span><span class="tag good">dbt-friendly</span>
+      </div>
+    </div>
+    <div class="callout green">✓ <strong>Why the shift to ELT?</strong> Modern warehouses (Snowflake, BigQuery) can process terabytes cheaply. Storage is nearly free. It's faster to load raw and transform later than to get transformation right before loading.</div>
+  </div>
+
+  <div id="etl-diagram" class="tab-pane">
+    <div class="diagram-wrap">
+      <div class="diagram-header"><span>ETL vs ELT — visual flow</span></div>
+      <div class="diagram-scroll"><svg class="diag" id="svg-etl" viewBox="0 0 700 180" style="width:100%;min-width:500px;"></svg></div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot" style="background:var(--blue)"></div>Source</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--purple)"></div>Transform</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--amber)"></div>Storage</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--green)"></div>Analytics</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="etl-when" class="tab-pane">
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Situation</th><th>ETL</th><th>ELT</th></tr></thead>
+      <tbody>
+        <tr><td>Legacy on-prem warehouse</td><td style="color:var(--green)">✓ Use ETL</td><td style="color:var(--muted)">Not supported</td></tr>
+        <tr><td>Modern cloud warehouse</td><td style="color:var(--muted)">Overkill</td><td style="color:var(--green)">✓ Use ELT</td></tr>
+        <tr><td>Sensitive PII must not enter DW raw</td><td style="color:var(--green)">✓ ETL — mask before loading</td><td style="color:var(--warn)">⚠ Risk</td></tr>
+        <tr><td>Need to re-run transforms on raw data</td><td style="color:var(--warn)">✗ Raw is gone</td><td style="color:var(--green)">✓ ELT — raw always preserved</td></tr>
+        <tr><td>Using dbt</td><td style="color:var(--muted)">Awkward</td><td style="color:var(--green)">✓ ELT is dbt's model</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- ─── 3. BATCH vs STREAM ─── -->
+<section id="batch">
+  <div class="sec-label">Section 03</div>
+  <h2>Batch vs Streaming vs <span>Micro-batch</span></h2>
+  <p>The three processing modes. Most companies use batch. Streaming is 10x more complex. Micro-batch is the sweet spot for 80% of "real-time" needs.</p>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Property</th><th>Batch</th><th>Micro-batch</th><th>Streaming</th></tr></thead>
+    <tbody>
+      <tr><td>Latency</td><td>Hours / daily</td><td>Minutes (1-15 min)</td><td>Milliseconds</td></tr>
+      <tr><td>Complexity</td><td style="color:var(--green)">Low</td><td style="color:var(--amber)">Medium</td><td style="color:var(--warn)">High (10x)</td></tr>
+      <tr><td>Cost</td><td style="color:var(--green)">Low</td><td style="color:var(--amber)">Medium</td><td style="color:var(--warn)">High</td></tr>
+      <tr><td>Tools</td><td>Airflow, dbt, Spark</td><td>Spark Streaming, Flink</td><td>Kafka, Flink, Kinesis</td></tr>
+      <tr><td>Use when</td><td>Daily reports, DW loads</td><td>Near real-time dashboards</td><td>Fraud detection, live feeds</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>// Decision tool — which processing mode?</h3>
+  <div class="decision-tool" id="dt-batch">
+    <div class="dt-header">Answer 3 questions → get a recommendation</div>
+    <div class="dt-body" id="dt-batch-body"></div>
+  </div>
+
+  <div class="callout warn">⚠ <strong>The 10x complexity jump:</strong> Streaming requires handling out-of-order events, watermarks, state management, exactly-once semantics, and fault tolerance. Only use true streaming when latency under 1 minute is a hard business requirement.</div>
+</section>
+
+<!-- ─── 4. INGESTION PATTERNS ─── -->
+<section id="ingestion">
+  <div class="sec-label">Section 04</div>
+  <h2>Ingestion <span>Patterns</span></h2>
+  <p>How data gets from source systems into your pipeline. Choosing the right pattern affects latency, cost, and complexity.</p>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('ing','patterns',this)">5 Patterns</button>
+    <button class="tab-btn" onclick="tab('ing','decision',this)">Decision Matrix</button>
+    <button class="tab-btn" onclick="tab('ing','cdc',this)">CDC Deep Dive</button>
+  </div>
+
+  <div id="ing-patterns" class="tab-pane active">
+    <div class="grid2">
+      <div class="card"><div class="card-title">Full Load</div><p style="font-size:.82rem;">Copy the entire source table every run. Simple but expensive at scale.</p><span class="tag good">Simple</span><span class="tag bad">Slow at scale</span><span class="tag neutral">Small tables</span></div>
+      <div class="card"><div class="card-title">Incremental Load</div><p style="font-size:.82rem;">Only copy rows that changed since last run. Uses a watermark column (updated_at).</p><span class="tag good">Efficient</span><span class="tag bad">Misses deletes</span><span class="tag neutral">Most common</span></div>
+      <div class="card"><div class="card-title">CDC — Change Data Capture</div><p style="font-size:.82rem;">Read the database transaction log. Captures inserts, updates AND deletes in real time.</p><span class="tag good">Captures deletes</span><span class="tag good">Real-time</span><span class="tag bad">Complex setup</span></div>
+      <div class="card"><div class="card-title">Micro-batch</div><p style="font-size:.82rem;">Run incremental loads every few minutes instead of hourly/daily.</p><span class="tag good">Near real-time</span><span class="tag neutral">Spark Streaming</span></div>
+      <div class="card"><div class="card-title">Streaming</div><p style="font-size:.82rem;">Events flow continuously as they happen. Sub-second latency.</p><span class="tag good">Lowest latency</span><span class="tag bad">Most complex</span><span class="tag neutral">Kafka / Flink</span></div>
+    </div>
+  </div>
+
+  <div id="ing-decision" class="tab-pane">
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Need</th><th>Pattern</th><th>Tool</th></tr></thead>
+      <tbody>
+        <tr><td>Small table, infrequent changes</td><td>Full load</td><td>Fivetran, Airbyte</td></tr>
+        <tr><td>Large table, has updated_at column</td><td>Incremental</td><td>Fivetran, dbt</td></tr>
+        <tr><td>Need to capture deletes</td><td>CDC</td><td>Debezium, Fivetran</td></tr>
+        <tr><td>Near real-time (&lt;5 min latency)</td><td>Micro-batch</td><td>Spark Streaming</td></tr>
+        <tr><td>Sub-second latency required</td><td>Streaming</td><td>Kafka + Flink</td></tr>
+        <tr><td>SaaS APIs (Salesforce, HubSpot)</td><td>Full or incremental</td><td>Fivetran, Airbyte</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div id="ing-cdc" class="tab-pane">
+    <p><strong>CDC (Change Data Capture)</strong> reads the database write-ahead log (WAL) to capture every change in real time — including deletes which incremental load misses.</p>
+    <div class="diagram-wrap">
+      <div class="diagram-header"><span>CDC flow — Debezium</span></div>
+      <div class="diagram-scroll"><svg class="diag" id="svg-cdc" viewBox="0 0 680 80" style="width:100%;min-width:500px;"></svg></div>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>CDC approach</th><th>How</th><th>Pros</th><th>Cons</th></tr></thead>
+      <tbody>
+        <tr><td>Log-based (Debezium)</td><td>Reads DB transaction log</td><td>Real-time, captures deletes, low DB load</td><td>Complex, needs DB permissions</td></tr>
+        <tr><td>Query-based</td><td>Polls updated_at column</td><td>Simple, works everywhere</td><td>Misses deletes, DB load</td></tr>
+        <tr><td>Trigger-based</td><td>DB trigger on every change</td><td>Captures everything</td><td>High DB overhead, not recommended</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- ─── 5. ARCHITECTURE PATTERNS ─── -->
+<section id="arch">
+  <div class="sec-label">Section 05</div>
+  <h2>Architecture <span>Patterns</span></h2>
+  <p>The three major patterns for organizing a data system. Click each to see the diagram and trade-offs.</p>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('arch','medallion',this)">Medallion ⭐</button>
+    <button class="tab-btn" onclick="tab('arch','lambda',this)">Lambda</button>
+    <button class="tab-btn" onclick="tab('arch','kappa',this)">Kappa</button>
+  </div>
+
+  <div id="arch-medallion" class="tab-pane active">
+    <p><strong>Most widely used pattern today.</strong> Organizes data into three layers by quality — Bronze (raw), Silver (clean), Gold (business-ready).</p>
+    <div class="diagram-wrap">
+      <div class="stack-tabs">
+        <button class="stack-tab active" onclick="switchArch('medallion','generic',this)">Generic</button>
+        <button class="stack-tab" onclick="switchArch('medallion','aws',this)">☁ AWS</button>
+        <button class="stack-tab" onclick="switchArch('medallion','gcp',this)">☁ GCP</button>
+        <button class="stack-tab" onclick="switchArch('medallion','azure',this)">☁ Azure</button>
+        <button class="stack-tab" onclick="switchArch('medallion','oss',this)">⚙ OSS</button>
+      </div>
+      <div class="diagram-scroll"><svg class="diag" id="svg-medallion" viewBox="0 0 720 160" style="width:100%;min-width:560px;"></svg></div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot" style="background:var(--bronze)"></div>Bronze</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--silver)"></div>Silver</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--amber)"></div>Gold</div>
+      </div>
+    </div>
+    <div class="grid3" style="margin-top:1rem;">
+      <div class="card"><div class="card-title" style="color:var(--bronze)">Bronze</div><p style="font-size:.82rem;">Raw copy of source. No transformation. Append only. Never delete. Your safety net.</p></div>
+      <div class="card"><div class="card-title" style="color:var(--silver)">Silver</div><p style="font-size:.82rem;">Cleaned, deduplicated, joined. SCD Type 2 applied here. What engineers query.</p></div>
+      <div class="card"><div class="card-title" style="color:var(--amber)">Gold</div><p style="font-size:.82rem;">Business aggregations. Star schema. What analysts and BI tools query directly.</p></div>
+    </div>
+    <div class="callout green" style="margin-top:1rem;">✓ <strong>dbt maps perfectly to Medallion:</strong> Staging models = Bronze→Silver, Intermediate models = Silver processing, Mart models = Gold layer.</div>
+  </div>
+
+  <div id="arch-lambda" class="tab-pane">
+    <p>Lambda handles both <strong>batch (accurate, slow)</strong> and <strong>streaming (fast, approximate)</strong> by running two separate pipelines and merging results in a serving layer.</p>
+    <div class="diagram-wrap">
+      <div class="stack-tabs">
+        <button class="stack-tab active" onclick="switchArch('lambda','generic',this)">Generic</button>
+        <button class="stack-tab" onclick="switchArch('lambda','aws',this)">☁ AWS</button>
+        <button class="stack-tab" onclick="switchArch('lambda','gcp',this)">☁ GCP</button>
+        <button class="stack-tab" onclick="switchArch('lambda','oss',this)">⚙ OSS</button>
+      </div>
+      <div class="diagram-scroll"><svg class="diag" id="svg-lambda" viewBox="0 0 720 220" style="width:100%;min-width:560px;"></svg></div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot" style="background:var(--purple)"></div>Batch layer</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--warn)"></div>Speed layer</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--green)"></div>Serving layer</div>
+      </div>
+    </div>
+    <div class="callout warn" style="margin-top:1rem;">⚠ <strong>The dual codebase problem:</strong> Lambda requires maintaining the same business logic twice — once in batch code, once in streaming code. When logic changes, both must be updated. This is why many teams move to Kappa or Medallion.</div>
+  </div>
+
+  <div id="arch-kappa" class="tab-pane">
+    <p>Kappa simplifies Lambda by <strong>eliminating the batch layer entirely</strong>. Everything is streaming. Historical reprocessing is done by replaying the event log.</p>
+    <div class="diagram-wrap">
+      <div class="stack-tabs">
+        <button class="stack-tab active" onclick="switchArch('kappa','generic',this)">Generic</button>
+        <button class="stack-tab" onclick="switchArch('kappa','oss',this)">⚙ OSS</button>
+      </div>
+      <div class="diagram-scroll"><svg class="diag" id="svg-kappa" viewBox="0 0 720 120" style="width:100%;min-width:560px;"></svg></div>
+    </div>
+    <div class="grid2" style="margin-top:1rem;">
+      <div class="card"><div class="card-title" style="color:var(--green)">When Kappa works</div><p style="font-size:.82rem;">Event log retained long-term (Kafka). Business logic is the same for batch and stream. Team has streaming expertise.</p></div>
+      <div class="card"><div class="card-title" style="color:var(--warn)">When Kappa fails</div><p style="font-size:.82rem;">Need complex historical joins. Reprocessing is expensive. Team is small — streaming adds significant ops burden.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── 6. LAKES vs DW ─── -->
+<section id="storage">
+  <div class="sec-label">Section 06</div>
+  <h2>Data Lakes vs Warehouses vs <span>Lakehouse</span></h2>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Property</th><th>Data Lake</th><th>Data Warehouse</th><th>Lakehouse</th></tr></thead>
+    <tbody>
+      <tr><td>Data types</td><td>Any (structured, semi, unstructured)</td><td>Structured only</td><td>Any</td></tr>
+      <tr><td>Schema</td><td>Schema on read</td><td>Schema on write</td><td>Both</td></tr>
+      <tr><td>Query speed</td><td style="color:var(--warn)">Slow</td><td style="color:var(--green)">Fast</td><td style="color:var(--green)">Fast</td></tr>
+      <tr><td>ACID transactions</td><td style="color:var(--warn)">No</td><td style="color:var(--green)">Yes</td><td style="color:var(--green)">Yes (Delta/Iceberg)</td></tr>
+      <tr><td>Cost</td><td style="color:var(--green)">Very cheap storage</td><td style="color:var(--warn)">Expensive</td><td style="color:var(--green)">Cheap storage</td></tr>
+      <tr><td>ML workloads</td><td style="color:var(--green)">Good</td><td style="color:var(--warn)">Poor</td><td style="color:var(--green)">Good</td></tr>
+      <tr><td>Examples</td><td>S3, GCS, ADLS</td><td>Snowflake, BigQuery, Redshift</td><td>Databricks, Delta Lake, Iceberg</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout green">✓ <strong>Lakehouse = best of both.</strong> Cheap object storage (like S3) + ACID transactions + fast SQL queries via table formats (Delta Lake, Apache Iceberg). This is where the industry is heading.</div>
+</section>
+
+<!-- ─── 7. PRINCIPLES ─── -->
+<section id="principles">
+  <div class="sec-label">Section 07</div>
+  <h2>Pipeline Design <span>Principles</span></h2>
+  <p>What separates a pipeline that works once from a pipeline that works in production forever.</p>
+
+  <div class="principle">
+    <div class="principle-num">01</div>
+    <div class="principle-title">Idempotency</div>
+    <div class="principle-body">
+      <p>Running the same pipeline twice should produce the same result as running it once. If your pipeline re-runs, it should not create duplicates or corrupt data.</p>
+      <pre><span class="cm">-- Idempotent write: DELETE + INSERT instead of just INSERT</span>
+<span class="kw">DELETE FROM</span> fact_sales <span class="kw">WHERE</span> date_id = <span class="str">'2024-01-01'</span>;
+<span class="kw">INSERT INTO</span> fact_sales <span class="kw">SELECT</span> * <span class="kw">FROM</span> staging_sales
+<span class="kw">WHERE</span> date_id = <span class="str">'2024-01-01'</span>;</pre>
+    </div>
+  </div>
+
+  <div class="principle">
+    <div class="principle-num">02</div>
+    <div class="principle-title">Backfilling</div>
+    <div class="principle-body">
+      <p>Backfilling means re-running a pipeline for historical dates — when you fix a bug, add a new column, or onboard a new data source. Design pipelines to accept a date parameter from day one.</p>
+      <pre><span class="cm">-- Parameterized pipeline (Airflow example)</span>
+<span class="fn">def</span> run_pipeline(execution_date):
+    load_data(start=execution_date, end=execution_date + timedelta(days=<span class="fn">1</span>))
+    transform(date=execution_date)
+    write(partition=execution_date)</pre>
+    </div>
+  </div>
+
+  <div class="principle">
+    <div class="principle-num">03</div>
+    <div class="principle-title">Late Arriving Data</div>
+    <div class="principle-body">
+      <p>5-15% of mobile events arrive late. Your pipeline must decide: wait for late data (higher latency) or process and correct later (more complex).</p>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Strategy</th><th>How</th><th>Best for</th></tr></thead>
+        <tbody>
+          <tr><td>Grace period</td><td>Wait N hours before closing a window</td><td>Batch pipelines</td></tr>
+          <tr><td>Watermarks</td><td>Track max event time, allow N minutes late</td><td>Streaming (Flink/Spark)</td></tr>
+          <tr><td>Append + reprocess</td><td>Accept late data, rerun affected partitions</td><td>When accuracy matters more than latency</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <div class="principle">
+    <div class="principle-num">04</div>
+    <div class="principle-title">Deduplication</div>
+    <div class="principle-body">
+      <p>At-least-once delivery guarantees mean duplicates are normal. Design for it at every layer.</p>
+      <pre><span class="cm">-- Deduplicate with ROW_NUMBER pattern</span>
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> (
+  <span class="kw">SELECT</span> *, <span class="fn">ROW_NUMBER</span>() <span class="kw">OVER</span> (
+    <span class="kw">PARTITION BY</span> event_id
+    <span class="kw">ORDER BY</span> received_at <span class="kw">DESC</span>
+  ) <span class="kw">AS</span> rn
+  <span class="kw">FROM</span> raw_events
+) <span class="kw">WHERE</span> rn = <span class="fn">1</span></pre>
+    </div>
+  </div>
+
+  <div class="principle">
+    <div class="principle-num">05</div>
+    <div class="principle-title">Error Handling & Retries</div>
+    <div class="principle-body">
+      <p>Every pipeline will fail. Design for it: exponential backoff retries, dead letter queues for poison records, alerting on repeated failures.</p>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Error type</th><th>Strategy</th></tr></thead>
+        <tbody>
+          <tr><td>Transient (network timeout)</td><td>Retry with exponential backoff (1s, 2s, 4s, 8s)</td></tr>
+          <tr><td>Poison record (bad data)</td><td>Dead letter queue — skip and investigate</td></tr>
+          <tr><td>Schema mismatch</td><td>Alert immediately — stop pipeline, don't corrupt data</td></tr>
+          <tr><td>Downstream not ready</td><td>Sensor — wait and check every N minutes</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── 8. DATA CONTRACTS ─── -->
+<section id="contracts">
+  <div class="sec-label">Section 08</div>
+  <h2>Data <span>Contracts</span></h2>
+  <p>A data contract is a <strong>formal agreement between data producers and consumers</strong> about the shape, quality, and SLA of data. Shifts failure detection from runtime to deployment time.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Without contracts</div>
+      <p style="font-size:.82rem;">Source team renames a column → your pipeline breaks at 3am → dashboards show wrong numbers → you find out from a Slack message from an angry analyst.</p>
+    </div>
+    <div class="card hl">
+      <div class="card-title">With contracts</div>
+      <p style="font-size:.82rem;">Source team tries to rename a column → schema registry rejects the change as a breaking change → PR is blocked → you're notified before deployment.</p>
+    </div>
+  </div>
+
+  <h3>// What a contract defines</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Element</th><th>Example</th></tr></thead>
+    <tbody>
+      <tr><td>Schema</td><td>Fields, types, nullable or not</td></tr>
+      <tr><td>Semantics</td><td>What does user_id mean? Is it always populated?</td></tr>
+      <tr><td>SLA</td><td>Data available by 6am UTC daily</td></tr>
+      <tr><td>Quality rules</td><td>revenue > 0, customer_id never null</td></tr>
+      <tr><td>Evolution rules</td><td>Adding fields OK, renaming fields BREAKING</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>// Schema formats</h3>
+  <div class="grid2">
+    <div class="card"><div class="card-title">Avro</div><p style="font-size:.82rem;">JSON-based schema. Most common with Kafka. Schema stored in Schema Registry. Binary serialization — compact.</p></div>
+    <div class="card"><div class="card-title">Protobuf</div><p style="font-size:.82rem;">Google's format. Strongly typed. More compact than Avro. Common in microservices and gRPC pipelines.</p></div>
+  </div>
+</section>
+
+<!-- ─── 9. MONITORING ─── -->
+<section id="monitoring">
+  <div class="sec-label">Section 09</div>
+  <h2>Monitoring & <span>Observability</span></h2>
+  <p>Two different things. Both are required in production.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Pipeline Monitoring</div>
+      <p style="font-size:.82rem;"><strong>Did it run?</strong> Did it finish on time? Did tasks fail? How long did it take?</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Tools: Airflow UI, Dagster, CloudWatch, Datadog</p>
+    </div>
+    <div class="card hl">
+      <div class="card-title">Data Monitoring</div>
+      <p style="font-size:.82rem;"><strong>Did it run correctly?</strong> Are row counts normal? Are there nulls where there shouldn't be? Did revenue drop 90%?</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Tools: dbt tests, Great Expectations, Monte Carlo</p>
+    </div>
+  </div>
+
+  <h3>// The three pillars of DE monitoring</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Pillar</th><th>What to monitor</th><th>Alert when</th></tr></thead>
+    <tbody>
+      <tr><td>Freshness</td><td>When was the table last updated?</td><td>Table not updated within SLA window</td></tr>
+      <tr><td>Volume</td><td>How many rows were loaded?</td><td>Row count drops/spikes >20% vs yesterday</td></tr>
+      <tr><td>Quality</td><td>Null rates, duplicate rates, value distributions</td><td>Null rate on key column exceeds threshold</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>// SLAs vs SLOs</h3>
+  <div class="grid2">
+    <div class="card"><div class="card-title">SLA — Service Level Agreement</div><p style="font-size:.82rem;">The external commitment: "Sales dashboard will be updated by 8am every day." Breach = business impact.</p></div>
+    <div class="card"><div class="card-title">SLO — Service Level Objective</div><p style="font-size:.82rem;">The internal target: "Pipeline must complete by 7am to meet the 8am SLA." Your engineering target with buffer.</p></div>
+  </div>
+</section>
+
+<!-- ─── 10. REAL STACKS ─── -->
+<section id="stacks">
+  <div class="sec-label">Section 10 — Interactive</div>
+  <h2>Real World <span>Stack Examples</span></h2>
+  <p>How the full pipeline looks at different company sizes — switch stacks and see the tools change.</p>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('stacks','startup',this)">🚀 Startup</button>
+    <button class="tab-btn" onclick="tab('stacks','midsize',this)">🏢 Mid-size</button>
+    <button class="tab-btn" onclick="tab('stacks','enterprise',this)">🏛 Enterprise</button>
+  </div>
+
+  <div id="stacks-startup" class="tab-pane active">
+    <div class="callout">🚀 <strong>Startup (1-2 data engineers):</strong> Simple, managed tools. Minimize ops burden. Ship fast.</div>
+    <div class="diagram-wrap">
+      <div class="stack-tabs">
+        <button class="stack-tab active" onclick="switchStack('startup','generic',this)">Generic</button>
+        <button class="stack-tab" onclick="switchStack('startup','aws',this)">☁ AWS</button>
+        <button class="stack-tab" onclick="switchStack('startup','gcp',this)">☁ GCP</button>
+        <button class="stack-tab" onclick="switchStack('startup','oss',this)">⚙ OSS</button>
+      </div>
+      <div class="diagram-scroll"><svg class="diag" id="svg-startup" viewBox="0 0 720 120" style="width:100%;min-width:500px;"></svg></div>
+    </div>
+  </div>
+
+  <div id="stacks-midsize" class="tab-pane">
+    <div class="callout amber">🏢 <strong>Mid-size (5-15 data engineers):</strong> More control, custom pipelines, dedicated orchestration.</div>
+    <div class="diagram-wrap">
+      <div class="stack-tabs">
+        <button class="stack-tab active" onclick="switchStack('midsize','generic',this)">Generic</button>
+        <button class="stack-tab" onclick="switchStack('midsize','aws',this)">☁ AWS</button>
+        <button class="stack-tab" onclick="switchStack('midsize','gcp',this)">☁ GCP</button>
+        <button class="stack-tab" onclick="switchStack('midsize','oss',this)">⚙ OSS</button>
+      </div>
+      <div class="diagram-scroll"><svg class="diag" id="svg-midsize" viewBox="0 0 720 140" style="width:100%;min-width:500px;"></svg></div>
+    </div>
+  </div>
+
+  <div id="stacks-enterprise" class="tab-pane">
+    <div class="callout warn">🏛 <strong>Enterprise (50+ engineers):</strong> Governance, data mesh, multiple teams, strict SLAs.</div>
+    <div class="diagram-wrap">
+      <div class="stack-tabs">
+        <button class="stack-tab active" onclick="switchStack('enterprise','generic',this)">Generic</button>
+        <button class="stack-tab" onclick="switchStack('enterprise','aws',this)">☁ AWS</button>
+        <button class="stack-tab" onclick="switchStack('enterprise','gcp',this)">☁ GCP</button>
+        <button class="stack-tab" onclick="switchStack('enterprise','oss',this)">⚙ OSS</button>
+      </div>
+      <div class="diagram-scroll"><svg class="diag" id="svg-enterprise" viewBox="0 0 720 160" style="width:100%;min-width:500px;"></svg></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── 11. INTERVIEWS ─── -->
+<section id="interviews">
+  <div class="sec-label">Section 11 — Interview Prep</div>
+  <h2>How This Appears in <span>Interviews</span></h2>
+  <p>DE system design interviews are different from SWE system design. They evaluate your ability to make <strong>data-specific decisions</strong>, not just draw boxes.</p>
+
+  <h3>// The 7-step framework</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Step</th><th>What to do</th><th>Time</th></tr></thead>
+    <tbody>
+      <tr><td>1. Requirements</td><td>Ask clarifying questions — functional + non-functional</td><td>5 min</td></tr>
+      <tr><td>2. Sources</td><td>Identify data sources, classify ingestion patterns, estimate volumes</td><td>3 min</td></tr>
+      <tr><td>3. Architecture</td><td>Draw high-level diagram, pick the right pattern (Medallion/Lambda/Kappa)</td><td>5 min</td></tr>
+      <tr><td>4. Data Model</td><td>Design Bronze/Silver/Gold schemas, define grain</td><td>5 min</td></tr>
+      <tr><td>5. Pipeline</td><td>Ingestion pattern, orchestration, scheduling, idempotency</td><td>5 min</td></tr>
+      <tr><td>6. Deep Dives</td><td>Scaling, failure handling, data quality, backfill</td><td>7 min</td></tr>
+      <tr><td>7. Monitoring</td><td>Freshness, volume, quality checks, SLAs</td><td>3 min</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>// Interview simulator — what do you ask first?</h3>
+  <p style="margin-bottom:.5rem;">You're given a scenario. Pick the best first question to ask the interviewer.</p>
+  <div id="sim-container"></div>
+
+  <h3>// Senior vs mid-level signals</h3>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title" style="color:var(--warn)">Mid-level answer</div>
+      <p style="font-size:.82rem;">Jumps straight to technology choices. "I'd use Kafka and Spark." Doesn't ask about requirements, scale, or existing infrastructure.</p>
+    </div>
+    <div class="card hl">
+      <div class="card-title" style="color:var(--green)">Senior answer</div>
+      <p style="font-size:.82rem;">Asks clarifying questions first. Talks about trade-offs. Mentions monitoring unprompted. Discusses failure modes and backfill strategy.</p>
+    </div>
+  </div>
+
+  <h3>// Common mistakes</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>#</th><th>Mistake</th><th>What to do instead</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Jumping to tools before requirements</td><td>Always ask: volume? latency? existing stack?</td></tr>
+      <tr><td>2</td><td>Proposing streaming when batch is fine</td><td>Ask: what latency is actually needed?</td></tr>
+      <tr><td>3</td><td>Ignoring failure modes</td><td>Always mention: what happens when this fails?</td></tr>
+      <tr><td>4</td><td>Forgetting monitoring</td><td>Mention freshness + volume + quality checks</td></tr>
+      <tr><td>5</td><td>Designing for SWE, not DE</td><td>Focus on data flow, not application logic</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<footer>
+  Data Engineering Guide · <a href="scd.html">← SCD</a> · <a href="data-modelling.html">← Data Modelling</a>
+</footer>
+
+<script>
+const C={blue:'#58a6ff',purple:'#bc8cff',amber:'#e3b341',green:'#3fb950',warn:'#f78166',bronze:'#cd7f32',silver:'#8b949e',surface:'#161b22',surface2:'#1f2937',border:'#30363d',text:'#e6edf3',muted:'#8b949e'};
+const ICONS={'PostgreSQL':'https://cdn.simpleicons.org/postgresql/4169E1','MySQL':'https://cdn.simpleicons.org/mysql/4479A1','MongoDB':'https://cdn.simpleicons.org/mongodb/47A248','Kafka':'https://cdn.simpleicons.org/apachekafka/ffffff','Spark':'https://cdn.simpleicons.org/apachespark/E25A1C','Airflow':'https://cdn.simpleicons.org/apacheairflow/017CEE','dbt':'https://cdn.simpleicons.org/dbt/FF694B','Databricks':'https://cdn.simpleicons.org/databricks/FF3621','Snowflake':'https://cdn.simpleicons.org/snowflake/29B5E8','Tableau':'https://cdn.simpleicons.org/tableau/E97627','Power BI':'https://cdn.simpleicons.org/powerbi/F2C811','Looker':'https://cdn.simpleicons.org/looker/4285F4','BigQuery':'https://cdn.simpleicons.org/googlebigquery/4285F4','S3':'https://cdn.simpleicons.org/amazons3/569A31','Redshift':'https://cdn.simpleicons.org/amazonredshift/8C4FFF','Airbyte':'https://cdn.simpleicons.org/airbyte/615EFF','Superset':'https://cdn.simpleicons.org/apachesuperset/FF8C00','Metabase':'https://cdn.simpleicons.org/metabase/509EE3','Flink':'https://cdn.simpleicons.org/apacheflink/E6526F','Trino':'https://cdn.simpleicons.org/trino/DD00A1','MinIO':'https://cdn.simpleicons.org/minio/C72C48','DuckDB':'https://cdn.simpleicons.org/duckdb/FFF000','GCS':'https://cdn.simpleicons.org/googlecloudstorage/4285F4','Pub/Sub':'https://cdn.simpleicons.org/googlepubsub/4285F4','Jupyter':'https://cdn.simpleicons.org/jupyter/F37626'};
+
+// ── TOOLTIP ──
+const tipEl=document.getElementById('tip');
+function showTip(e,t){tipEl.style.display='block';tipEl.textContent=t;moveTip(e);}
+function moveTip(e){tipEl.style.left=(e.clientX+14)+'px';tipEl.style.top=(e.clientY-10)+'px';}
+function hideTip(){tipEl.style.display='none';}
+
+// ── SVG HELPERS ──
+function ns(tag,attrs){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.entries(attrs||{}).forEach(([k,v])=>e.setAttribute(k,v));return e;}
+function clearSVG(id){const s=document.getElementById(id);if(!s)return s;while(s.firstChild)s.removeChild(s.firstChild);addDefs(s);return s;}
+function addDefs(svg){const d=ns('defs');d.innerHTML=`<marker id="arr" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="${C.muted}"/></marker>`;svg.appendChild(d);}
+function arrow(svg,x1,y1,x2,y2,color){svg.appendChild(ns('line',{x1,y1,x2,y2,stroke:color||C.muted,'stroke-width':1.5,'stroke-dasharray':'5 3','marker-end':'url(#arr)'}));}
+function curve(svg,x1,y1,x2,y2,color){const p=ns('path',{d:`M${x1},${y1} C${(x1+x2)/2},${y1} ${(x1+x2)/2},${y2} ${x2},${y2}`,fill:'none',stroke:color||C.muted,'stroke-width':1.5,'stroke-dasharray':'5 3','marker-end':'url(#arr)'});svg.appendChild(p);}
+function txt(p,x,y,t,fill,size,weight,anchor){const e=ns('text',{x,y,fill:fill||C.muted,'font-family':'IBM Plex Mono','font-size':size||10,'font-weight':weight||400,'text-anchor':anchor||'start'});e.textContent=t;p.appendChild(e);}
+
+function box(svg,x,y,w,h,color,label,sublabel,tip,useIcon){
+  const g=ns('g');
+  g.appendChild(ns('rect',{x,y,width:w,height:h,rx:6,fill:C.surface2,stroke:color,'stroke-width':1.5}));
+  g.appendChild(ns('rect',{x:x+1,y:y+1,width:w-2,height:4,rx:5,fill:color,opacity:.7}));
+  txt(g,x+w/2,y+16,label,color,10,600,'middle');
+  if(sublabel){
+    if(useIcon && ICONS[sublabel]){
+      const img=ns('image',{href:ICONS[sublabel],x:x+w/2-10,y:y+20,width:20,height:20});
+      g.appendChild(img);
+      txt(g,x+w/2,y+50,sublabel,C.muted,8,400,'middle');
+    } else {
+      txt(g,x+w/2,y+32,sublabel,C.muted,9,400,'middle');
+    }
+  }
+  if(tip){g.style.cursor='pointer';g.addEventListener('mouseenter',e=>showTip(e,tip));g.addEventListener('mousemove',moveTip);g.addEventListener('mouseleave',hideTip);}
+  svg.appendChild(g);
+}
+
+function smallBox(svg,x,y,w,h,color,label,icon){
+  const g=ns('g');
+  g.appendChild(ns('rect',{x,y,width:w,height:h,rx:5,fill:C.surface2,stroke:color,'stroke-width':1}));
+  if(icon && ICONS[icon]){
+    g.appendChild(ns('image',{href:ICONS[icon],x:x+4,y:y+4,width:14,height:14}));
+    txt(g,x+22,y+13,label,color,8,500,'start');
+  } else {
+    txt(g,x+w/2,y+h/2+3,label,color,8,500,'middle');
+  }
+  svg.appendChild(g);
+}
+
+// ── CORE PIPELINE ──
+function buildCore(){
+  const svg=clearSVG('svg-core');
+  const steps=[{l:'Source',c:C.blue},{l:'Extract',c:C.purple},{l:'Transform',c:C.amber},{l:'Load',c:C.bronze},{l:'Serve',c:C.green}];
+  const BW=100,BH=50,GAP=24,Y=14;
+  steps.forEach((s,i)=>{
+    const x=i*(BW+GAP)+10;
+    box(svg,x,Y,BW,BH,s.c,s.l,'','');
+    if(i<steps.length-1) arrow(svg,x+BW+2,Y+BH/2,x+BW+GAP-2,Y+BH/2);
+  });
+}
+
+// ── ETL vs ELT ──
+function buildETL(){
+  const svg=clearSVG('svg-etl');
+  const BW=120,BH=55,Y1=14,Y2=100;
+  txt(svg,2,46,'ETL',C.muted,10,600);
+  txt(svg,2,132,'ELT',C.muted,10,600);
+  [{x:40,c:C.blue,l:'Source',s:'DB / API'},{x:180,c:C.purple,l:'Transform',s:'outside DW'},{x:320,c:C.amber,l:'Load',s:'Warehouse'},{x:460,c:C.green,l:'Analytics',s:'BI Tools'}].forEach((b,i,arr)=>{
+    box(svg,b.x,Y1,BW,BH,b.c,b.l,b.s,'');
+    if(i<arr.length-1) arrow(svg,b.x+BW+2,Y1+BH/2,arr[i+1].x-2,Y1+BH/2);
+  });
+  [{x:40,c:C.blue,l:'Source',s:'DB / API'},{x:180,c:C.amber,l:'Load Raw',s:'Data Lake'},{x:320,c:C.purple,l:'Transform',s:'inside DW (dbt)'},{x:460,c:C.green,l:'Analytics',s:'BI Tools'}].forEach((b,i,arr)=>{
+    box(svg,b.x,Y2,BW,BH,b.c,b.l,b.s,'');
+    if(i<arr.length-1) arrow(svg,b.x+BW+2,Y2+BH/2,arr[i+1].x-2,Y2+BH/2);
+  });
+  const div=ns('line',{x1:2,y1:90,x2:700,y2:90,stroke:C.border,'stroke-width':1,'stroke-dasharray':'3 4'});
+  svg.insertBefore(div,svg.firstChild);
+}
+
+// ── CDC ──
+function buildCDC(){
+  const svg=clearSVG('svg-cdc');
+  const steps=[{l:'Source DB',s:'Postgres/MySQL',c:C.blue},{l:'WAL / Binlog',s:'Transaction log',c:C.muted},{l:'Debezium',s:'CDC connector',c:C.purple},{l:'Kafka',s:'Event stream',c:C.warn},{l:'Data Lake',s:'Bronze layer',c:C.bronze}];
+  const BW=110,BH=56,GAP=14,Y=12;
+  steps.forEach((s,i)=>{
+    const x=i*(BW+GAP)+5;
+    box(svg,x,Y,BW,BH,s.c,s.l,s.s,`${s.l}: ${s.s}`);
+    if(i<steps.length-1) arrow(svg,x+BW+2,Y+BH/2,x+BW+GAP-2,Y+BH/2);
+  });
+}
+
+// ── MEDALLION DATA ──
+const medallionData={
+  generic:{sources:['Source A','Source B','Source C'],bronze:{label:'Bronze',sub:'Raw ingestion',color:'#cd7f32'},silver:{label:'Silver',sub:'Clean + join',color:C.silver},gold:{label:'Gold',sub:'Business logic',color:C.amber},outputs:['BI Tools','ML Models','Analysts']},
+  aws:{sources:['PostgreSQL','S3','Kinesis'],bronze:{label:'Bronze',sub:'S3 / Glue',color:'#cd7f32'},silver:{label:'Silver',sub:'Redshift+Glue',color:C.silver},gold:{label:'Gold',sub:'Redshift+dbt',color:C.amber},outputs:['QuickSight','Tableau','SageMaker']},
+  gcp:{sources:['PostgreSQL','GCS','Pub/Sub'],bronze:{label:'Bronze',sub:'GCS / Dataflow',color:'#cd7f32'},silver:{label:'Silver',sub:'BigQuery',color:C.silver},gold:{label:'Gold',sub:'BigQuery+dbt',color:C.amber},outputs:['Looker','Looker Studio','Vertex AI']},
+  azure:{sources:['SQL Server','Blob','Event Hubs'],bronze:{label:'Bronze',sub:'ADLS Gen2',color:'#cd7f32'},silver:{label:'Silver',sub:'Synapse+Spark',color:C.silver},gold:{label:'Gold',sub:'Synapse+dbt',color:C.amber},outputs:['Power BI','Synapse','Azure ML']},
+  oss:{sources:['PostgreSQL','MongoDB','Kafka'],bronze:{label:'Bronze',sub:'MinIO+Airbyte',color:'#cd7f32'},silver:{label:'Silver',sub:'Spark+Delta',color:C.silver},gold:{label:'Gold',sub:'dbt+Trino',color:C.amber},outputs:['Superset','Metabase','Jupyter']}
+};
+
+function drawMedallion(key,svgId){
+  const svg=clearSVG(svgId||'svg-medallion');
+  if(!svg)return;
+  const d=medallionData[key]||medallionData.generic;
+  const BW=130,BH=100,Y=30;
+  d.sources.forEach((s,i)=>smallBox(svg,5,Y+i*32,85,26,C.blue,s,s));
+  arrow(svg,90,Y+48,110,Y+50);
+  const layers=[d.bronze,d.silver,d.gold];
+  layers.forEach((l,i)=>{
+    const x=110+i*(BW+20);
+    box(svg,x,Y,BW,BH,l.color,l.label,l.sub,l.label+': '+l.sub);
+    if(i<2) arrow(svg,x+BW+2,Y+BH/2,x+BW+20,Y+BH/2);
+  });
+  const lastX=110+2*(BW+20);
+  arrow(svg,lastX+BW+2,Y+50,lastX+BW+18,Y+50);
+  d.outputs.forEach((o,i)=>smallBox(svg,lastX+BW+20,Y+i*34,110,28,C.green,o,o));
+}
+
+// ── LAMBDA DATA ──
+const lambdaData={
+  generic:{source:'Event Stream',batch:{l:'Batch Layer',s:'Scheduled jobs'},speed:{l:'Speed Layer',s:'Real-time processing'},serve:{l:'Serving Layer',s:'Merge results'},out:'Analytics / BI'},
+  aws:{source:'Kinesis',batch:{l:'Batch Layer',s:'AWS Glue + S3'},speed:{l:'Speed Layer',s:'Kinesis Analytics'},serve:{l:'Serving Layer',s:'Redshift'},out:'QuickSight / Tableau'},
+  gcp:{source:'Pub/Sub',batch:{l:'Batch Layer',s:'Dataflow + GCS'},speed:{l:'Speed Layer',s:'Dataflow Stream'},serve:{l:'Serving Layer',s:'BigQuery'},out:'Looker / Data Studio'},
+  oss:{source:'Apache Kafka',batch:{l:'Batch Layer',s:'Spark + Delta Lake'},speed:{l:'Speed Layer',s:'Flink + Redis'},serve:{l:'Serving Layer',s:'Trino'},out:'Superset / Metabase'}
+};
+
+function drawLambda(key,svgId){
+  const svg=clearSVG(svgId||'svg-lambda');
+  if(!svg)return;
+  const d=lambdaData[key]||lambdaData.generic;
+  const BW=130,BH=70;
+  box(svg,5,75,100,60,C.blue,'Source',d.source,d.source);
+  curve(svg,105,95,175,45,C.purple);
+  box(svg,175,15,BW,BH,C.purple,d.batch.l,d.batch.s,d.batch.s);
+  curve(svg,305,50,370,105,C.purple);
+  curve(svg,105,115,175,155,C.warn);
+  box(svg,175,130,BW,BH,C.warn,d.speed.l,d.speed.s,d.speed.s);
+  curve(svg,305,160,370,120,C.warn);
+  box(svg,370,80,BW,BH,C.amber,d.serve.l,d.serve.s,d.serve.s);
+  arrow(svg,500,115,530,115);
+  box(svg,530,80,BW,BH,C.green,'Analytics',d.out,d.out);
+  txt(svg,177,10,'Batch path — hours latency, accurate',C.muted,8);
+  txt(svg,177,212,'Speed path — seconds latency, approximate',C.muted,8);
+}
+
+// ── KAPPA DATA ──
+const kappaData={
+  generic:{source:'Event Stream',stream:{l:'Stream Processor',s:'Single pipeline'},store:{l:'Event Log',s:'Long retention'},serve:{l:'Serving Layer',s:''},out:'Analytics'},
+  oss:{source:'Apache Kafka',stream:{l:'Stream Processor',s:'Apache Flink'},store:{l:'Event Log',s:'Kafka (7-90 days)'},serve:{l:'Serving Layer',s:'Trino + Delta'},out:'Superset'}
+};
+
+function drawKappa(key){
+  const svg=clearSVG('svg-kappa');
+  if(!svg)return;
+  const d=kappaData[key]||kappaData.generic;
+  const BW=130,BH=60,Y=30;
+  box(svg,5,Y,90,60,C.blue,'Source',d.source,d.source);
+  arrow(svg,95,Y+30,120,Y+30);
+  box(svg,120,Y,BW,BH,C.warn,d.store.l,d.store.s,d.store.s);
+  arrow(svg,250,Y+30,275,Y+30);
+  box(svg,275,Y,BW,BH,C.purple,d.stream.l,d.stream.s,d.stream.s);
+  arrow(svg,405,Y+30,430,Y+30);
+  box(svg,430,Y,BW,BH,C.amber,d.serve.l,d.serve.s,d.serve.s);
+  arrow(svg,560,Y+30,585,Y+30);
+  box(svg,585,Y,110,60,C.green,'Analytics',d.out,d.out);
+  txt(svg,120,Y+BH+15,'Reprocess by replaying the event log from any point in time',C.muted,8);
+}
+
+// ── STACK DATA ──
+const stackData={
+  startup:{
+    generic:{steps:[{l:'Source',s:'App DB',c:C.blue},{l:'Ingest',s:'Managed EL Tool',c:C.purple},{l:'Warehouse',s:'Cloud DW',c:C.amber},{l:'Transform',s:'dbt',c:C.silver},{l:'Serve',s:'BI Tool',c:C.green}]},
+    aws:{steps:[{l:'Source',s:'RDS Postgres',c:C.blue},{l:'Ingest',s:'Fivetran',c:C.purple},{l:'Warehouse',s:'Redshift',c:C.amber},{l:'Transform',s:'dbt',c:C.silver},{l:'Serve',s:'Tableau',c:C.green}]},
+    gcp:{steps:[{l:'Source',s:'Cloud SQL',c:C.blue},{l:'Ingest',s:'Fivetran',c:C.purple},{l:'Warehouse',s:'BigQuery',c:C.amber},{l:'Transform',s:'dbt',c:C.silver},{l:'Serve',s:'Looker Studio',c:C.green}]},
+    oss:{steps:[{l:'Source',s:'PostgreSQL',c:C.blue},{l:'Ingest',s:'Airbyte',c:C.purple},{l:'Warehouse',s:'DuckDB',c:C.amber},{l:'Transform',s:'dbt',c:C.silver},{l:'Serve',s:'Metabase',c:C.green}]}
+  },
+  midsize:{
+    generic:{steps:[{l:'Sources',s:'Multiple DBs + APIs',c:C.blue},{l:'Ingest',s:'EL + CDC',c:C.purple},{l:'Bronze',s:'Data Lake',c:C.bronze},{l:'Silver/Gold',s:'Warehouse + dbt',c:C.amber},{l:'Orchestrate',s:'Airflow',c:C.silver},{l:'Serve',s:'BI + Notebooks',c:C.green}]},
+    aws:{steps:[{l:'Sources',s:'RDS + S3 + APIs',c:C.blue},{l:'Ingest',s:'Fivetran + Debezium',c:C.purple},{l:'Bronze',s:'S3 + Glue',c:C.bronze},{l:'Silver/Gold',s:'Redshift + dbt',c:C.amber},{l:'Orchestrate',s:'Airflow (MWAA)',c:C.silver},{l:'Serve',s:'QuickSight + Tableau',c:C.green}]},
+    gcp:{steps:[{l:'Sources',s:'CloudSQL + GCS + APIs',c:C.blue},{l:'Ingest',s:'Dataflow + Pub/Sub',c:C.purple},{l:'Bronze',s:'GCS buckets',c:C.bronze},{l:'Silver/Gold',s:'BigQuery + dbt',c:C.amber},{l:'Orchestrate',s:'Cloud Composer',c:C.silver},{l:'Serve',s:'Looker + Vertex AI',c:C.green}]},
+    oss:{steps:[{l:'Sources',s:'Postgres + MongoDB',c:C.blue},{l:'Ingest',s:'Airbyte + Debezium',c:C.purple},{l:'Bronze',s:'MinIO + Delta Lake',c:C.bronze},{l:'Silver/Gold',s:'Spark + dbt',c:C.amber},{l:'Orchestrate',s:'Apache Airflow',c:C.silver},{l:'Serve',s:'Superset + Jupyter',c:C.green}]}
+  },
+  enterprise:{
+    generic:{steps:[{l:'Sources',s:'100+ systems',c:C.blue},{l:'Ingest',s:'CDC + Streaming',c:C.purple},{l:'Data Lake',s:'Petabyte scale',c:C.bronze},{l:'Warehouse',s:'Multiple DWs',c:C.amber},{l:'Govern',s:'Catalog + Contracts',c:C.silver},{l:'Serve',s:'Data Mesh / APIs',c:C.green}]},
+    aws:{steps:[{l:'Sources',s:'100+ DBs + Kafka',c:C.blue},{l:'Ingest',s:'Kinesis + Debezium',c:C.purple},{l:'Data Lake',s:'S3 + Iceberg',c:C.bronze},{l:'Warehouse',s:'Redshift + Snowflake',c:C.amber},{l:'Govern',s:'Glue Catalog + AWS Lake Formation',c:C.silver},{l:'Serve',s:'QuickSight + Tableau + APIs',c:C.green}]},
+    gcp:{steps:[{l:'Sources',s:'100+ systems',c:C.blue},{l:'Ingest',s:'Pub/Sub + Dataflow',c:C.purple},{l:'Data Lake',s:'GCS + Iceberg',c:C.bronze},{l:'Warehouse',s:'BigQuery (multi-region)',c:C.amber},{l:'Govern',s:'Dataplex + DataHub',c:C.silver},{l:'Serve',s:'Looker + Vertex + APIs',c:C.green}]},
+    oss:{steps:[{l:'Sources',s:'100+ systems',c:C.blue},{l:'Ingest',s:'Kafka + Debezium + Airbyte',c:C.purple},{l:'Data Lake',s:'MinIO + Delta/Iceberg',c:C.bronze},{l:'Warehouse',s:'Trino + Spark',c:C.amber},{l:'Govern',s:'DataHub + Apache Atlas',c:C.silver},{l:'Serve',s:'Superset + APIs + Notebooks',c:C.green}]}
+  }
+};
+
+function drawStack(size,key,svgId){
+  const svg=clearSVG(svgId);
+  if(!svg)return;
+  const d=stackData[size][key]||stackData[size].generic;
+  const steps=d.steps;
+  const BW=Math.min(110,Math.floor(700/steps.length)-12);
+  const BH=size==='enterprise'?90:size==='midsize'?80:70;
+  const GAP=Math.floor((700-steps.length*BW)/(steps.length+1));
+  const Y=size==='enterprise'?35:size==='midsize'?30:25;
+  steps.forEach((s,i)=>{
+    const x=GAP+i*(BW+GAP);
+    box(svg,x,Y,BW,BH,s.c,s.l,s.s,s.s,false);
+    if(i<steps.length-1) arrow(svg,x+BW+2,Y+BH/2,x+BW+GAP-2,Y+BH/2);
+  });
+}
+
+// ── ARCH SWITCHER ──
+const archState={medallion:'generic',lambda:'generic',kappa:'generic'};
+function switchArch(type,key,btn){
+  btn.closest('.stack-tabs').querySelectorAll('.stack-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  archState[type]=key;
+  if(type==='medallion') drawMedallion(key,'svg-medallion');
+  else if(type==='lambda') drawLambda(key,'svg-lambda');
+  else if(type==='kappa') drawKappa(key);
+}
+
+// ── STACK SWITCHER ──
+const stackState={startup:'generic',midsize:'generic',enterprise:'generic'};
+function switchStack(size,key,btn){
+  btn.closest('.stack-tabs').querySelectorAll('.stack-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  stackState[size]=key;
+  drawStack(size,key,'svg-'+size);
+}
+
+// ── TABS ──
+function tab(group,id,btn){
+  document.querySelectorAll(`[id^="${group}-"]`).forEach(p=>p.classList.remove('active'));
+  document.getElementById(`${group}-${id}`).classList.add('active');
+  btn.closest('.tab-bar').querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // trigger diagram build if needed
+  if(id==='diagram' && group==='etl') buildETL();
+  if(id==='startup') drawStack('startup',stackState.startup,'svg-startup');
+  if(id==='midsize') drawStack('midsize',stackState.midsize,'svg-midsize');
+  if(id==='enterprise') drawStack('enterprise',stackState.enterprise,'svg-enterprise');
+}
+
+// ── BATCH DECISION TOOL ──
+const batchQs=[
+  {q:'How quickly do stakeholders need to see the data?',sub:'This determines the minimum latency requirement.',opts:[{l:'Next day is fine (daily reports)',key:'batch'},{l:'Within 15 minutes',key:'micro'},{l:'Under 1 minute (real-time)',key:'stream'}]},
+  {q:'How complex is your team\'s streaming expertise?',sub:'Streaming is 10x more complex to operate.',opts:[{l:'Small team — prefer simple tools',key:'batch'},{l:'Medium team — can handle some complexity',key:'micro'},{l:'Experienced team with streaming background',key:'stream'}]},
+  {q:'What is the business impact of processing failures?',sub:'Higher impact = more robust (complex) solution needed.',opts:[{l:'Low — analysts can wait for next run',key:'batch'},{l:'Medium — need recovery within 30 min',key:'micro'},{l:'High — fraud, payments, live inventory',key:'stream'}]}
+];
+const batchResults={
+  batch:{title:'Batch Processing',why:'Daily latency is acceptable, team is simple. Use Airflow + dbt + Spark on a schedule. Cheapest, most maintainable option.'},
+  micro:{title:'Micro-batch',why:'Near real-time needed but true streaming complexity isn\'t justified. Use Spark Structured Streaming on 5-15 min intervals. Best trade-off for 80% of use cases.'},
+  stream:{title:'True Streaming',why:'Business requires sub-minute latency with experienced team. Use Kafka + Flink or Spark Streaming. Prepare for 10x operational complexity.'}
+};
+let batchAnswers=[],batchIdx=0;
+function renderBatchTool(){
+  const body=document.getElementById('dt-batch-body');
+  if(batchIdx>=batchQs.length){
+    const score={batch:0,micro:0,stream:0};
+    batchAnswers.forEach(a=>score[a]++);
+    const winner=Object.entries(score).sort((a,b)=>b[1]-a[1])[0][0];
+    const r=batchResults[winner];
+    body.innerHTML=`<div class="dt-result" style="display:block"><div class="dt-result-title">→ Recommendation: ${r.title}</div><div class="dt-result-why">${r.why}</div></div><button class="dt-back" onclick="batchReset()">↺ Start over</button>`;
+    return;
+  }
+  const q=batchQs[batchIdx];
+  body.innerHTML=`<div style="font-family:var(--mono);font-size:.65rem;color:var(--muted);margin-bottom:.5rem;">Question ${batchIdx+1} of ${batchQs.length}</div><div class="dt-q">${q.q}</div><p style="font-size:.8rem;color:var(--muted);margin-bottom:.8rem;">${q.sub}</p><div class="dt-opts">${q.opts.map(o=>`<button class="dt-opt" onclick="batchAnswer('${o.key}',this)">${o.l}</button>`).join('')}</div>${batchIdx>0?'<button class="dt-back" onclick="batchBack()">← back</button>':''}`;
+}
+function batchAnswer(key,btn){btn.classList.add('sel');batchAnswers.push(key);setTimeout(()=>{batchIdx++;renderBatchTool();},350);}
+function batchBack(){if(batchIdx>0){batchIdx--;batchAnswers.pop();renderBatchTool();}}
+function batchReset(){batchIdx=0;batchAnswers=[];renderBatchTool();}
+
+// ── INTERVIEW SIMULATOR ──
+const simScenarios=[
+  {
+    scenario:'A company wants a real-time dashboard showing live sales numbers updated every 30 seconds.',
+    question:'What is your FIRST clarifying question?',
+    opts:[
+      {l:'What streaming tools do you currently use?',correct:false,fb:'Too early for tools. Understand requirements first.'},
+      {l:'Does "30 seconds" mean data must be 30 seconds fresh, or the dashboard refreshes every 30 seconds?',correct:true,fb:'Exactly right. These are different requirements — one needs true streaming, the other just needs micro-batch + fast dashboard refresh.'},
+      {l:'Should we use Kafka or Kinesis?',correct:false,fb:'Never jump to tool selection before requirements are clear.'},
+      {l:'What is the current data volume?',correct:false,fb:'Important but not the FIRST question — clarify the actual latency requirement first.'}
+    ]
+  },
+  {
+    scenario:'You\'re told: "Our daily pipeline keeps failing. Fix it."',
+    question:'What do you investigate FIRST?',
+    opts:[
+      {l:'Rewrite the pipeline from scratch',correct:false,fb:'Never rewrite without understanding the failure. That\'s how you introduce new bugs.'},
+      {l:'Check logs for the error message and which task is failing',correct:true,fb:'Correct. Always diagnose before fixing. Check logs → identify failing task → understand root cause → fix.'},
+      {l:'Increase the compute resources',correct:false,fb:'Scaling up without understanding the issue wastes money and may not fix anything.'},
+      {l:'Ask if we can switch to Spark',correct:false,fb:'Tool changes don\'t fix bugs. Understand the failure first.'}
+    ]
+  },
+  {
+    scenario:'A new data source (Salesforce CRM) needs to be ingested daily.',
+    question:'Which ingestion pattern do you choose first?',
+    opts:[
+      {l:'Build a custom Salesforce API connector from scratch',correct:false,fb:'Reinventing the wheel. Managed tools like Fivetran already handle Salesforce perfectly.'}      {l:'Use Fivetran or Airbyte — they have native Salesforce connectors',correct:true,fb:'Correct. Always check if a managed connector exists before building. Saves weeks of work.'},
+      {l:'Set up CDC with Debezium',correct:false,fb:'Debezium is for databases with transaction logs, not SaaS APIs like Salesforce.'},
+      {l:'Full load every hour',correct:false,fb:'Hourly full loads of Salesforce would hit API rate limits fast. Use a managed connector.'}
+    ]
+  }
+];
+let simIdx=0;
+function renderSim(){
+  const c=document.getElementById('sim-container');
+  if(simIdx>=simScenarios.length){c.innerHTML=`<div class="callout green">✓ Completed all scenarios! <button class="dt-back" onclick="simReset()" style="display:inline;margin-left:1rem;">↺ Restart</button></div>`;return;}
+  const s=simScenarios[simIdx];
+  c.innerHTML=`<div class="sim-scenario"><div class="sim-scenario-label">Scenario ${simIdx+1} of ${simScenarios.length}</div>${s.scenario}</div><p style="font-size:.85rem;margin-bottom:.6rem;">${s.question}</p><div class="sim-opts">${s.opts.map((o,i)=>`<button class="sim-opt" onclick="simAnswer(${i},this)">${o.l}</button>`).join('')}</div><div class="sim-feedback" id="sim-fb"></div><button class="sim-next" id="sim-next" onclick="simNext()">Next scenario →</button>`;
+}
+function simAnswer(i,btn){
+  const s=simScenarios[simIdx];const o=s.opts[i];
+  document.querySelectorAll('.sim-opt').forEach(b=>b.disabled=true);
+  btn.classList.add(o.correct?'correct':'wrong');
+  const fb=document.getElementById('sim-fb');
+  fb.style.cssText=`display:block;background:${o.correct?'rgba(63,185,80,.08)':'rgba(247,129,102,.08)'};color:${o.correct?'var(--green)':'var(--warn)'};border:1px solid ${o.correct?'var(--green)':'var(--warn)'};border-radius:6px;padding:.6rem .9rem;`;
+  fb.textContent=(o.correct?'✓ ':'✗ ')+o.fb;
+  if(!o.correct){document.querySelectorAll('.sim-opt')[s.opts.findIndex(x=>x.correct)].classList.add('correct');}
+  document.getElementById('sim-next').style.display='inline-block';
+}
+function simNext(){simIdx++;renderSim();}
+function simReset(){simIdx=0;renderSim();}
+
+const navLinks=document.querySelectorAll('nav a[href^="#"]');
+window.addEventListener('scroll',()=>{let cur='';document.querySelectorAll('section[id]').forEach(s=>{if(window.scrollY>=s.offsetTop-80)cur=s.id;});navLinks.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+cur));});
+
+window.addEventListener('load',()=>{
+  buildCore();buildCDC();
+  drawMedallion('generic','svg-medallion');
+  drawLambda('generic','svg-lambda');
+  drawKappa('generic');
+  drawStack('startup','generic','svg-startup');
+  drawStack('midsize','generic','svg-midsize');
+  drawStack('enterprise','generic','svg-enterprise');
+  renderBatchTool();renderSim();
+});
+</script>
+</body>
+</html>
+EOF
+echo "done $(wc -c < /mnt/user-data/outputs/data-pipelines.html) bytes"

@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schema Types & Normalization — Interactive</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
+:root {
+  --bg:#0d1117; --surface:#161b22; --surface2:#1f2937;
+  --border:#30363d; --accent:#58a6ff; --accent2:#3fb950;
+  --warn:#f78166; --purple:#bc8cff; --amber:#e3b341;
+  --text:#e6edf3; --muted:#8b949e;
+  --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:300;line-height:1.7;}
+nav{position:sticky;top:0;z-index:100;background:rgba(13,17,23,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 2rem;height:52px;gap:0;}
+nav a{color:var(--muted);text-decoration:none;font-size:.78rem;font-family:var(--mono);padding:0 1rem;height:52px;display:flex;align-items:center;border-bottom:2px solid transparent;white-space:nowrap;transition:color .2s,border-color .2s;}
+nav a:hover,nav a.active{color:var(--accent);border-bottom-color:var(--accent);}
+.nav-brand{color:var(--text)!important;font-weight:600!important;border-right:1px solid var(--border);padding-right:1.2rem!important;margin-right:.5rem;}
+section{max-width:960px;margin:0 auto;padding:3.5rem 2rem;border-top:1px solid var(--border);}
+section:first-of-type{border-top:none;}
+.sec-label{font-family:var(--mono);font-size:.68rem;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:.6rem;}
+h2{font-size:1.7rem;font-weight:600;margin-bottom:.5rem;letter-spacing:-.01em;}
+h2 span{color:var(--purple);}
+.sec-intro{color:var(--muted);margin-bottom:1.5rem;max-width:620px;}
+p{color:var(--muted);margin-bottom:.8rem;}
+strong{color:var(--text);font-weight:600;}
+code{font-family:var(--mono);font-size:.82rem;color:var(--accent);background:var(--surface);padding:.1rem .4rem;border-radius:3px;}
+.callout{background:var(--surface);border-left:3px solid var(--purple);border-radius:0 6px 6px 0;padding:.9rem 1.1rem;margin:1rem 0;font-size:.88rem;color:var(--text);}
+.callout.green{border-left-color:var(--accent2);}
+.callout.warn{border-left-color:var(--warn);}
+.callout.amber{border-left-color:var(--amber);}
+
+/* ── SCHEMA SELECTOR ── */
+.schema-tabs{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.5rem;}
+.stab{font-family:var(--mono);font-size:.78rem;padding:.5rem 1.1rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;transition:all .2s;}
+.stab:hover{border-color:var(--purple);color:var(--text);}
+.stab.active{border-color:var(--purple);background:rgba(188,140,255,.1);color:var(--purple);}
+
+.schema-body{display:none;}
+.schema-body.active{display:grid;grid-template-columns:1fr 380px;gap:1.5rem;align-items:start;}
+@media(max-width:700px){.schema-body.active{grid-template-columns:1fr;}}
+
+/* info panel */
+.info-panel{}
+.schema-headline{font-size:1.2rem;font-weight:600;color:var(--text);margin-bottom:.4rem;}
+.schema-tagline{color:var(--muted);font-size:.9rem;margin-bottom:1.1rem;}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin:1rem 0;}
+.info-card{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:.8rem;}
+.info-card-label{font-family:var(--mono);font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.4rem;}
+.info-card-val{font-size:.82rem;color:var(--text);}
+.tag-row{display:flex;gap:.4rem;flex-wrap:wrap;margin:.8rem 0;}
+.tag{font-family:var(--mono);font-size:.68rem;padding:.2rem .6rem;border-radius:3px;background:var(--surface2);}
+.tag.good{background:rgba(63,185,80,.12);color:var(--accent2);}
+.tag.bad{background:rgba(247,129,102,.12);color:var(--warn);}
+.tag.neutral{background:rgba(88,166,255,.1);color:var(--accent);}
+.when-list{margin:.5rem 0;padding-left:1rem;}
+.when-list li{font-size:.83rem;color:var(--muted);margin-bottom:.3rem;}
+.when-list li strong{color:var(--text);}
+
+/* ERD canvas */
+.erd-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.erd-header{padding:.6rem 1rem;border-bottom:1px solid var(--border);background:var(--surface2);font-family:var(--mono);font-size:.7rem;color:var(--muted);display:flex;align-items:center;justify-content:space-between;}
+.erd-dot{width:8px;height:8px;border-radius:50%;margin-right:6px;display:inline-block;}
+.erd-canvas{position:relative;height:340px;}
+svg.lines{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;}
+.etable{position:absolute;border-radius:7px;overflow:hidden;min-width:110px;border:1px solid var(--border);transition:all .35s cubic-bezier(.34,1.56,.64,1);}
+.etable.fact{border-color:var(--accent2);}
+.etable.dim{border-color:var(--purple);}
+.etable.hub{border-color:var(--accent);}
+.etable.lnk{border-color:var(--amber);}
+.etable.sat{border-color:var(--muted);}
+.etable.norm{border-color:var(--accent2);}
+.ethead{padding:.35rem .7rem;font-family:var(--mono);font-size:.7rem;font-weight:600;}
+.etable.fact .ethead{background:rgba(63,185,80,.18);color:var(--accent2);}
+.etable.dim  .ethead{background:rgba(188,140,255,.15);color:var(--purple);}
+.etable.hub  .ethead{background:rgba(88,166,255,.15);color:var(--accent);}
+.etable.lnk  .ethead{background:rgba(227,179,65,.15);color:var(--amber);}
+.etable.sat  .ethead{background:rgba(139,148,158,.15);color:var(--muted);}
+.etable.norm .ethead{background:rgba(63,185,80,.12);color:var(--accent2);}
+.erow{padding:.25rem .7rem;font-family:var(--mono);font-size:.68rem;color:var(--muted);border-top:1px solid var(--border);}
+.erow.pk{color:var(--accent);}
+.erow.fk{color:var(--warn);}
+.erow.measure{color:var(--accent2);}
+
+/* ── NORMALIZATION ── */
+.norm-container{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.norm-steps{display:flex;border-bottom:1px solid var(--border);}
+.nstep{flex:1;padding:.7rem .4rem;font-family:var(--mono);font-size:.72rem;text-align:center;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;background:none;border-top:none;border-left:none;border-right:none;}
+.nstep:not(:last-child){border-right:1px solid var(--border);}
+.nstep.active{color:var(--purple);border-bottom-color:var(--purple);background:rgba(188,140,255,.06);}
+.nstep.done{color:var(--accent2);}
+.norm-body{display:grid;grid-template-columns:1fr 1fr;min-height:420px;}
+@media(max-width:650px){.norm-body{grid-template-columns:1fr;}}
+.norm-explain{padding:1.4rem;border-right:1px solid var(--border);}
+.norm-visual{padding:1.4rem;overflow-x:auto;}
+.norm-rule{font-family:var(--mono);font-size:.8rem;color:var(--purple);font-weight:600;margin-bottom:.5rem;}
+.norm-desc{font-size:.85rem;color:var(--muted);margin-bottom:1rem;}
+.problem-label{font-family:var(--mono);font-size:.65rem;color:var(--warn);text-transform:uppercase;letter-spacing:.08em;margin:.8rem 0 .3rem;}
+.fix-label{font-family:var(--mono);font-size:.65rem;color:var(--accent2);text-transform:uppercase;letter-spacing:.08em;margin:.8rem 0 .3rem;}
+.norm-nav{display:flex;gap:.6rem;margin-top:1.2rem;}
+.nnav-btn{font-family:var(--mono);font-size:.75rem;padding:.4rem .9rem;border-radius:5px;cursor:pointer;transition:all .2s;}
+.nnav-btn.prev{background:none;border:1px solid var(--border);color:var(--muted);}
+.nnav-btn.prev:hover{border-color:var(--text);color:var(--text);}
+.nnav-btn.next{background:var(--purple);border:1px solid var(--purple);color:#0d1117;font-weight:600;}
+.nnav-btn.next:hover{opacity:.85;}
+.nnav-btn:disabled{opacity:.3;cursor:not-allowed;}
+
+/* visual tables */
+.vtbl{margin-bottom:.8rem;}
+.vtbl-name{font-family:var(--mono);font-size:.68rem;font-weight:600;margin-bottom:.3rem;}
+table.vt{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:.7rem;}
+table.vt th{background:var(--surface2);color:var(--muted);padding:.3rem .6rem;border:1px solid var(--border);font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;}
+table.vt td{padding:.28rem .6rem;border:1px solid var(--border);color:var(--text);}
+table.vt tr:nth-child(even) td{background:rgba(255,255,255,.02);}
+td.hi-bad{background:rgba(247,129,102,.15)!important;color:var(--warn);}
+td.hi-good{background:rgba(63,185,80,.1)!important;color:var(--accent2);}
+td.hi-move{background:rgba(188,140,255,.12)!important;color:var(--purple);}
+.arrow-down{text-align:center;font-size:1.1rem;color:var(--muted);margin:.4rem 0;}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="#" class="nav-brand">DE Guide</a>
+  <a href="#schemas" class="active">Schema Types</a>
+  <a href="#normalization">Normalization</a>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     SECTION 1 — SCHEMA TYPES
+═══════════════════════════════════════════ -->
+<section id="schemas">
+  <div class="sec-label">Section 08</div>
+  <h2>Schema <span>Types</span></h2>
+  <p class="sec-intro">Once you know your grain and whether it's OLAP or OLTP, you choose a schema type. Click each one to explore its structure, trade-offs, and when to use it.</p>
+
+  <div class="schema-tabs">
+    <button class="stab active" onclick="showSchema('star',this)">Star Schema</button>
+    <button class="stab" onclick="showSchema('snowflake',this)">Snowflake Schema</button>
+    <button class="stab" onclick="showSchema('3nf',this)">3NF / Inmon</button>
+    <button class="stab" onclick="showSchema('obt',this)">One Big Table</button>
+    <button class="stab" onclick="showSchema('vault',this)">Data Vault 2.0</button>
+  </div>
+
+  <!-- STAR -->
+  <div class="schema-body active" id="sb-star">
+    <div class="info-panel">
+      <div class="schema-headline">Star Schema</div>
+      <div class="schema-tagline">Fact table at the center. Flat dimension tables surrounding it. The most common analytical schema.</div>
+      <div class="tag-row">
+        <span class="tag good">Fastest queries</span>
+        <span class="tag good">Easy to understand</span>
+        <span class="tag bad">Some redundancy</span>
+        <span class="tag neutral">OLAP</span>
+      </div>
+      <div class="info-grid">
+        <div class="info-card"><div class="info-card-label">Designed by</div><div class="info-card-val">Ralph Kimball</div></div>
+        <div class="info-card"><div class="info-card-label">Schema shape</div><div class="info-card-val">1 fact + N flat dims</div></div>
+        <div class="info-card"><div class="info-card-label">Join depth</div><div class="info-card-val">One join per dimension</div></div>
+        <div class="info-card"><div class="info-card-label">Best warehouse</div><div class="info-card-val">Snowflake, BigQuery</div></div>
+      </div>
+      <p style="font-size:.83rem;margin-top:.5rem;"><strong>When to use:</strong></p>
+      <ul class="when-list">
+        <li>System is designed for <strong>analytics and reporting</strong></li>
+        <li>Analysts and BI tools (Tableau, Looker) will query it</li>
+        <li>Dimensions are <strong>flat</strong> — no deep hierarchies</li>
+        <li>Query speed matters more than storage</li>
+      </ul>
+      <div class="callout green" style="margin-top:1rem;">✓ Go-to schema for most data warehouses. Simple, fast, and analysts can understand it without a data engineer's help.</div>
+    </div>
+    <div class="erd-wrap">
+      <div class="erd-header"><span><span class="erd-dot" style="background:var(--accent2)"></span>fact_sales</span><span style="color:var(--purple)">4 dimensions</span></div>
+      <div class="erd-canvas" id="erd-star"></div>
+    </div>
+  </div>
+
+  <!-- SNOWFLAKE -->
+  <div class="schema-body" id="sb-snowflake">
+    <div class="info-panel">
+      <div class="schema-headline">Snowflake Schema</div>
+      <div class="schema-tagline">Like Star, but dimension tables are further normalized into sub-dimension tables. Branches like a snowflake.</div>
+      <div class="tag-row">
+        <span class="tag good">Less storage</span>
+        <span class="tag good">Less redundancy</span>
+        <span class="tag bad">More joins</span>
+        <span class="tag bad">Slower queries</span>
+        <span class="tag neutral">OLAP</span>
+      </div>
+      <div class="info-grid">
+        <div class="info-card"><div class="info-card-label">Based on</div><div class="info-card-val">Star Schema + 3NF dims</div></div>
+        <div class="info-card"><div class="info-card-label">Schema shape</div><div class="info-card-val">Fact + normalized dims</div></div>
+        <div class="info-card"><div class="info-card-label">Join depth</div><div class="info-card-val">2–3 joins per dimension</div></div>
+        <div class="info-card"><div class="info-card-label">Good for</div><div class="info-card-val">Hierarchical dimensions</div></div>
+      </div>
+      <p style="font-size:.83rem;margin-top:.5rem;"><strong>When to use:</strong></p>
+      <ul class="when-list">
+        <li>Dimensions have <strong>hierarchies</strong> (Product → Category → Dept)</li>
+        <li>Storage is a concern and redundancy must be minimized</li>
+        <li>Dimension tables are very large</li>
+      </ul>
+      <div class="callout amber" style="margin-top:1rem;">⚡ Modern warehouses like Snowflake and BigQuery are so fast that the join cost is often negligible. Many teams prefer Star for simplicity.</div>
+    </div>
+    <div class="erd-wrap">
+      <div class="erd-header"><span><span class="erd-dot" style="background:var(--accent2)"></span>fact_sales</span><span style="color:var(--purple)">normalized dims</span></div>
+      <div class="erd-canvas" id="erd-snowflake"></div>
+    </div>
+  </div>
+
+  <!-- 3NF -->
+  <div class="schema-body" id="sb-3nf">
+    <div class="info-panel">
+      <div class="schema-headline">3NF — Inmon Model</div>
+      <div class="schema-tagline">Fully normalized Enterprise Data Warehouse. Single source of truth. Build data marts on top for analytics.</div>
+      <div class="tag-row">
+        <span class="tag good">No redundancy</span>
+        <span class="tag good">Single source of truth</span>
+        <span class="tag bad">Complex joins</span>
+        <span class="tag bad">Slower analytics</span>
+        <span class="tag neutral">OLTP / EDW</span>
+      </div>
+      <div class="info-grid">
+        <div class="info-card"><div class="info-card-label">Designed by</div><div class="info-card-val">Bill Inmon</div></div>
+        <div class="info-card"><div class="info-card-label">Schema shape</div><div class="info-card-val">Fully normalized tables</div></div>
+        <div class="info-card"><div class="info-card-label">Flow</div><div class="info-card-val">EDW → Data Marts</div></div>
+        <div class="info-card"><div class="info-card-label">Best for</div><div class="info-card-val">Enterprise DW, OLTP</div></div>
+      </div>
+      <p style="font-size:.83rem;margin-top:.5rem;"><strong>When to use:</strong></p>
+      <ul class="when-list">
+        <li>System is <strong>transactional</strong> — frequent inserts/updates</li>
+        <li>Data integrity is critical</li>
+        <li>Need a single enterprise source of truth</li>
+        <li>Will build separate data marts for each team</li>
+      </ul>
+      <div class="callout" style="margin-top:1rem;">💡 Inmon builds the EDW first (normalized), then creates denormalized data marts per business unit. Opposite of Kimball's bottom-up approach.</div>
+    </div>
+    <div class="erd-wrap">
+      <div class="erd-header"><span><span class="erd-dot" style="background:var(--accent2)"></span>Normalized tables</span><span style="color:var(--accent)">3NF</span></div>
+      <div class="erd-canvas" id="erd-3nf"></div>
+    </div>
+  </div>
+
+  <!-- OBT -->
+  <div class="schema-body" id="sb-obt">
+    <div class="info-panel">
+      <div class="schema-headline">One Big Table (OBT)</div>
+      <div class="schema-tagline">Denormalize everything into a single wide table. Zero joins for analysts. Popular with columnar warehouses.</div>
+      <div class="tag-row">
+        <span class="tag good">Simplest for analysts</span>
+        <span class="tag good">No joins needed</span>
+        <span class="tag bad">Huge storage</span>
+        <span class="tag bad">Hard to change</span>
+        <span class="tag neutral">OLAP</span>
+      </div>
+      <div class="info-grid">
+        <div class="info-card"><div class="info-card-label">Schema shape</div><div class="info-card-val">1 wide flat table</div></div>
+        <div class="info-card"><div class="info-card-label">Joins needed</div><div class="info-card-val">None</div></div>
+        <div class="info-card"><div class="info-card-label">Storage cost</div><div class="info-card-val">Very high</div></div>
+        <div class="info-card"><div class="info-card-label">Best for</div><div class="info-card-val">Simple reporting, small teams</div></div>
+      </div>
+      <p style="font-size:.83rem;margin-top:.5rem;"><strong>When to use:</strong></p>
+      <ul class="when-list">
+        <li>Small team, analysts prefer simplicity over structure</li>
+        <li>Using <strong>columnar stores</strong> (BigQuery, DuckDB, Snowflake)</li>
+        <li>Data doesn't change much</li>
+        <li>Performance-critical workloads on a fixed query pattern</li>
+      </ul>
+      <div class="callout warn" style="margin-top:1rem;">⚠ OBT is an anti-pattern at scale. If business logic changes, you have to rebuild the whole table. Use sparingly.</div>
+    </div>
+    <div class="erd-wrap">
+      <div class="erd-header"><span><span class="erd-dot" style="background:var(--accent2)"></span>one_wide_table</span><span style="color:var(--muted)">no joins needed</span></div>
+      <div class="erd-canvas" id="erd-obt"></div>
+    </div>
+  </div>
+
+  <!-- VAULT -->
+  <div class="schema-body" id="sb-vault">
+    <div class="info-panel">
+      <div class="schema-headline">Data Vault 2.0</div>
+      <div class="schema-tagline">Three building blocks: Hubs (business keys), Links (relationships), Satellites (attributes + history). Built for auditability and change.</div>
+      <div class="tag-row">
+        <span class="tag good">Full audit trail</span>
+        <span class="tag good">Easy to add sources</span>
+        <span class="tag bad">Complex to build</span>
+        <span class="tag bad">Hard to query directly</span>
+        <span class="tag neutral">Enterprise</span>
+      </div>
+      <div class="info-grid">
+        <div class="info-card"><div class="info-card-label">Hubs</div><div class="info-card-val">Unique business keys</div></div>
+        <div class="info-card"><div class="info-card-label">Links</div><div class="info-card-val">Relationships between hubs</div></div>
+        <div class="info-card"><div class="info-card-label">Satellites</div><div class="info-card-val">Attributes + history</div></div>
+        <div class="info-card"><div class="info-card-label">Best for</div><div class="info-card-val">Regulated industries, audit</div></div>
+      </div>
+      <p style="font-size:.83rem;margin-top:.5rem;"><strong>When to use:</strong></p>
+      <ul class="when-list">
+        <li>Need <strong>full audit trail</strong> of every data change</li>
+        <li>Multiple source systems feed the same entities</li>
+        <li>Regulated industry (finance, healthcare, insurance)</li>
+        <li>Data changes frequently and history must be preserved</li>
+      </ul>
+      <div class="callout amber" style="margin-top:1rem;">⚡ Data Vault is the raw layer. You still build a Star Schema on top for analysts to query — Vault is the foundation, not the end state.</div>
+    </div>
+    <div class="erd-wrap">
+      <div class="erd-header"><span><span class="erd-dot" style="background:var(--accent)"></span>Hub</span> <span><span class="erd-dot" style="background:var(--amber)"></span>Link</span> <span><span class="erd-dot" style="background:var(--muted)"></span>Satellite</span></div>
+      <div class="erd-canvas" id="erd-vault"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SECTION 2 — NORMALIZATION
+═══════════════════════════════════════════ -->
+<section id="normalization">
+  <div class="sec-label">Section 05</div>
+  <h2><span>Normalization</span></h2>
+  <p class="sec-intro">Normalization organizes a table to remove redundancy and improve data integrity. Walk through each step and see the table transform.</p>
+
+  <div class="norm-container">
+    <div class="norm-steps">
+      <button class="nstep active" id="ns-0" onclick="goNorm(0)">Raw table</button>
+      <button class="nstep" id="ns-1" onclick="goNorm(1)">1NF</button>
+      <button class="nstep" id="ns-2" onclick="goNorm(2)">2NF</button>
+      <button class="nstep" id="ns-3" onclick="goNorm(3)">3NF</button>
+    </div>
+    <div class="norm-body">
+      <!-- LEFT: explanation -->
+      <div class="norm-explain" id="norm-explain"></div>
+      <!-- RIGHT: visual tables -->
+      <div class="norm-visual" id="norm-visual"></div>
+    </div>
+  </div>
+</section>
+
+<script>
+/* ═══════════════════════════════════
+   ERD HELPERS
+═══════════════════════════════════ */
+function clearCanvas(id) {
+  const c = document.getElementById(id);
+  c.querySelectorAll('.etable').forEach(t => t.remove());
+  const svg = c.querySelector('svg.lines');
+  if (svg) svg.innerHTML = '';
+}
+
+function addTable(canvasId, opts) {
+  const c = document.getElementById(canvasId);
+  const d = document.createElement('div');
+  d.className = 'etable ' + opts.cls;
+  d.id = canvasId + '-' + opts.id;
+  d.style.cssText = `left:${opts.x}px;top:${opts.y}px;opacity:0;transform:scale(.8);transition:all .35s cubic-bezier(.34,1.56,.64,1);`;
+  let html = `<div class="ethead">${opts.title}</div>`;
+  (opts.rows || []).forEach(r => {
+    html += `<div class="erow${r.pk?' pk':r.fk?' fk':r.m?' measure':''}">${r.col}</div>`;
+  });
+  d.innerHTML = html;
+  c.appendChild(d);
+  requestAnimationFrame(() => { d.style.opacity='1'; d.style.transform='scale(1)'; });
+}
+
+function drawConnections(canvasId, pairs) {
+  const c = document.getElementById(canvasId);
+  let svg = c.querySelector('svg.lines');
+  if (!svg) { svg = document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.className.baseVal='lines'; c.appendChild(svg); }
+  svg.innerHTML = '';
+  setTimeout(() => {
+    pairs.forEach(([aid, bid, color]) => {
+      const a = document.getElementById(canvasId+'-'+aid);
+      const b = document.getElementById(canvasId+'-'+bid);
+      if (!a||!b) return;
+      const cr = c.getBoundingClientRect();
+      const ar = a.getBoundingClientRect();
+      const br = b.getBoundingClientRect();
+      const x1 = ar.left-cr.left+ar.width/2, y1 = ar.top-cr.top+ar.height/2;
+      const x2 = br.left-cr.left+br.width/2, y2 = br.top-cr.top+br.height/2;
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1',x1); line.setAttribute('y1',y1);
+      line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+      line.setAttribute('stroke', color||'#30363d');
+      line.setAttribute('stroke-width','1.5');
+      line.setAttribute('stroke-dasharray','5 3');
+      svg.appendChild(line);
+    });
+  }, 400);
+}
+
+/* ═══════════════════════════════════
+   SCHEMA DEFINITIONS
+═══════════════════════════════════ */
+function buildStar() {
+  const id = 'erd-star';
+  clearCanvas(id);
+  addTable(id,{id:'fact',cls:'fact',title:'fact_sales',x:120,y:110,rows:[
+    {col:'order_id PK',pk:true},{col:'date_id FK',fk:true},{col:'customer_id FK',fk:true},
+    {col:'product_id FK',fk:true},{col:'revenue',m:true},{col:'quantity',m:true}
+  ]});
+  setTimeout(()=>{
+    addTable(id,{id:'date',cls:'dim',title:'dim_date',x:5,y:5,rows:[{col:'date_id PK',pk:true},{col:'date'},{col:'month'},{col:'year'},{col:'quarter'}]});
+    addTable(id,{id:'cust',cls:'dim',title:'dim_customer',x:240,y:5,rows:[{col:'customer_id PK',pk:true},{col:'name'},{col:'city'},{col:'segment'}]});
+    addTable(id,{id:'prod',cls:'dim',title:'dim_product',x:5,y:240,rows:[{col:'product_id PK',pk:true},{col:'name'},{col:'category'},{col:'price'}]});
+    addTable(id,{id:'region',cls:'dim',title:'dim_region',x:240,y:240,rows:[{col:'region_id PK',pk:true},{col:'name'},{col:'country'}]});
+  },100);
+  drawConnections(id,[['fact','date','#3fb950'],['fact','cust','#3fb950'],['fact','prod','#3fb950'],['fact','region','#3fb950']]);
+}
+
+function buildSnowflake() {
+  const id = 'erd-snowflake';
+  clearCanvas(id);
+  addTable(id,{id:'fact',cls:'fact',title:'fact_sales',x:115,y:120,rows:[
+    {col:'order_id PK',pk:true},{col:'date_id FK',fk:true},{col:'product_id FK',fk:true},{col:'revenue',m:true}
+  ]});
+  setTimeout(()=>{
+    addTable(id,{id:'prod',cls:'dim',title:'dim_product',x:240,y:60,rows:[{col:'product_id PK',pk:true},{col:'name'},{col:'category_id FK',fk:true}]});
+    addTable(id,{id:'cat',cls:'dim',title:'dim_category',x:240,y:210,rows:[{col:'category_id PK',pk:true},{col:'name'},{col:'dept_id FK',fk:true}]});
+    addTable(id,{id:'dept',cls:'dim',title:'dim_department',x:240,y:295,rows:[{col:'dept_id PK',pk:true},{col:'name'}]});
+    addTable(id,{id:'date',cls:'dim',title:'dim_date',x:5,y:60,rows:[{col:'date_id PK',pk:true},{col:'date'},{col:'month'},{col:'year'}]});
+  },100);
+  drawConnections(id,[['fact','prod','#3fb950'],['prod','cat','#bc8cff'],['cat','dept','#bc8cff'],['fact','date','#3fb950']]);
+}
+
+function build3NF() {
+  const id = 'erd-3nf';
+  clearCanvas(id);
+  addTable(id,{id:'ord',cls:'norm',title:'Orders',x:110,y:10,rows:[
+    {col:'order_id PK',pk:true},{col:'customer_id FK',fk:true},{col:'created_at'}
+  ]});
+  setTimeout(()=>{
+    addTable(id,{id:'oi',cls:'norm',title:'OrderItems',x:110,y:145,rows:[
+      {col:'item_id PK',pk:true},{col:'order_id FK',fk:true},{col:'product_id FK',fk:true},{col:'qty'}
+    ]});
+    addTable(id,{id:'cust',cls:'dim',title:'Customers',x:5,y:10,rows:[
+      {col:'customer_id PK',pk:true},{col:'name'},{col:'email'},{col:'city_id FK',fk:true}
+    ]});
+    addTable(id,{id:'prod',cls:'dim',title:'Products',x:240,y:145,rows:[
+      {col:'product_id PK',pk:true},{col:'name'},{col:'cat_id FK',fk:true},{col:'price'}
+    ]});
+    addTable(id,{id:'cat',cls:'dim',title:'Categories',x:240,y:280,rows:[
+      {col:'cat_id PK',pk:true},{col:'name'}
+    ]});
+    addTable(id,{id:'city',cls:'dim',title:'Cities',x:5,y:175,rows:[
+      {col:'city_id PK',pk:true},{col:'name'},{col:'country'}
+    ]});
+  },100);
+  drawConnections(id,[['ord','oi','#58a6ff'],['oi','prod','#58a6ff'],['ord','cust','#58a6ff'],['prod','cat','#bc8cff'],['cust','city','#bc8cff']]);
+}
+
+function buildOBT() {
+  const id = 'erd-obt';
+  clearCanvas(id);
+  addTable(id,{id:'obt',cls:'fact',title:'sales_wide_table',x:30,y:30,rows:[
+    {col:'order_id PK',pk:true},
+    {col:'order_date',m:true},{col:'customer_name',m:true},{col:'customer_city',m:true},
+    {col:'customer_segment',m:true},{col:'product_name',m:true},{col:'product_category',m:true},
+    {col:'region',m:true},{col:'revenue',m:true},{col:'quantity',m:true}
+  ]});
+}
+
+function buildVault() {
+  const id = 'erd-vault';
+  clearCanvas(id);
+  addTable(id,{id:'hc',cls:'hub',title:'Hub_Customer',x:5,y:10,rows:[
+    {col:'hub_cust_id PK',pk:true},{col:'customer_bk'},{col:'load_date'},{col:'rec_src'}
+  ]});
+  setTimeout(()=>{
+    addTable(id,{id:'ho',cls:'hub',title:'Hub_Order',x:230,y:10,rows:[
+      {col:'hub_ord_id PK',pk:true},{col:'order_bk'},{col:'load_date'},{col:'rec_src'}
+    ]});
+    addTable(id,{id:'lnk',cls:'lnk',title:'Link_CustOrder',x:100,y:160,rows:[
+      {col:'link_id PK',pk:true},{col:'hub_cust_id FK',fk:true},{col:'hub_ord_id FK',fk:true},{col:'load_date'}
+    ]});
+    addTable(id,{id:'sat',cls:'sat',title:'Sat_Customer',x:5,y:280,rows:[
+      {col:'hub_cust_id FK',fk:true},{col:'name'},{col:'city'},{col:'load_date'},{col:'end_date'}
+    ]});
+    addTable(id,{id:'sato',cls:'sat',title:'Sat_Order',x:220,y:280,rows:[
+      {col:'hub_ord_id FK',fk:true},{col:'status'},{col:'amount'},{col:'load_date'}
+    ]});
+  },100);
+  drawConnections(id,[['hc','lnk','#e3b341'],['ho','lnk','#e3b341'],['hc','sat','#8b949e'],['ho','sato','#8b949e']]);
+}
+
+const schemaBuilders = { star:buildStar, snowflake:buildSnowflake, '3nf':build3NF, obt:buildOBT, vault:buildVault };
+
+function showSchema(key, btn) {
+  document.querySelectorAll('.schema-body').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.stab').forEach(b => b.classList.remove('active'));
+  document.getElementById('sb-'+key).classList.add('active');
+  btn.classList.add('active');
+  setTimeout(() => schemaBuilders[key](), 50);
+}
+
+/* ═══════════════════════════════════
+   NORMALIZATION STEPPER
+═══════════════════════════════════ */
+const normSteps = [
+  {
+    rule: 'Raw — Unnormalized table',
+    desc: 'A real orders table before any design. Contains multiple values in cells, repeated data, and update anomalies.',
+    problems: ['Multiple values in one cell (products column)', 'Alice appears twice — same email and city repeated', 'Change Alice\'s city? Must update multiple rows'],
+    fixes: [],
+    tables: [
+      { name: '', cls:'', rows:[
+        ['order_id','customer_name','customer_email','customer_city','products','category'],
+        ['1001','Alice','alice@co.com','London','<span class="hi-bad">Laptop, Mouse</span>','<span class="hi-bad">Elec, Elec</span>'],
+        ['1002','<span class="hi-bad">Alice</span>','<span class="hi-bad">alice@co.com</span>','<span class="hi-bad">London</span>','Keyboard','Electronics'],
+        ['1003','Bob','bob@co.com','Paris','Desk','Furniture'],
+      ]}
+    ]
+  },
+  {
+    rule: '1NF — First Normal Form',
+    desc: 'Every cell must contain a single atomic value. No lists, no comma-separated values in one cell.',
+    problems: ['Multi-valued cells are split into separate rows'],
+    fixes: ['Each product now has its own row', 'One value per cell — atomic'],
+    tables: [
+      { name: '', cls:'', rows:[
+        ['order_id','customer_name','customer_email','customer_city','product','category'],
+        ['1001','Alice','alice@co.com','London','<span class="hi-good">Laptop</span>','Electronics'],
+        ['1001','<span class="hi-bad">Alice</span>','<span class="hi-bad">alice@co.com</span>','<span class="hi-bad">London</span>','<span class="hi-good">Mouse</span>','Electronics'],
+        ['1002','<span class="hi-bad">Alice</span>','<span class="hi-bad">alice@co.com</span>','<span class="hi-bad">London</span>','Keyboard','Electronics'],
+        ['1003','Bob','bob@co.com','Paris','Desk','Furniture'],
+      ]}
+    ]
+  },
+  {
+    rule: '2NF — Second Normal Form',
+    desc: 'Every non-key column must depend on the WHOLE primary key. Split tables so each table has one focus.',
+    problems: ['Customer data repeats because it depends on customer, not on (order, product)'],
+    fixes: ['Customer info moved to its own table', 'Orders table now references customers by ID'],
+    tables: [
+      { name: 'orders', cls:'hi-good', rows:[
+        ['order_id PK','customer_id FK','product','category'],
+        ['1001','<span class="hi-move">1</span>','Laptop','Electronics'],
+        ['1001','<span class="hi-move">1</span>','Mouse','Electronics'],
+        ['1002','<span class="hi-move">1</span>','Keyboard','Electronics'],
+        ['1003','<span class="hi-move">2</span>','Desk','Furniture'],
+      ]},
+      { name: 'customers', cls:'hi-move', rows:[
+        ['customer_id PK','name','email','city'],
+        ['1','Alice','alice@co.com','London'],
+        ['2','Bob','bob@co.com','Paris'],
+      ]}
+    ]
+  },
+  {
+    rule: '3NF — Third Normal Form',
+    desc: 'No transitive dependencies. Non-key columns must not depend on other non-key columns. Product category depends on product, not on order.',
+    problems: ['category depends on product, not on order_id — transitive dependency'],
+    fixes: ['Products table created', 'Categories table created', 'Each table has exactly one job'],
+    tables: [
+      { name: 'orders', cls:'', rows:[
+        ['order_id PK','customer_id FK','product_id FK'],
+        ['1001','1','10'],['1001','1','11'],['1002','1','12'],['1003','2','13'],
+      ]},
+      { name: 'products', cls:'hi-move', rows:[
+        ['product_id PK','name','cat_id FK'],
+        ['10','Laptop','1'],['11','Mouse','1'],['12','Keyboard','1'],['13','Desk','2'],
+      ]},
+      { name: 'categories', cls:'hi-good', rows:[
+        ['cat_id PK','name'],['1','Electronics'],['2','Furniture'],
+      ]}
+    ]
+  }
+];
+
+let normIdx = 0;
+
+function renderNorm() {
+  const s = normSteps[normIdx];
+  // steps header
+  document.querySelectorAll('.nstep').forEach((b,i) => {
+    b.classList.remove('active','done');
+    if (i < normIdx) b.classList.add('done');
+    if (i === normIdx) b.classList.add('active');
+  });
+
+  // explain
+  const exp = document.getElementById('norm-explain');
+  exp.innerHTML = `
+    <div class="norm-rule">${s.rule}</div>
+    <div class="norm-desc">${s.desc}</div>
+    ${s.problems.length ? `<div class="problem-label">Problems</div><ul class="when-list">${s.problems.map(p=>`<li>${p}</li>`).join('')}</ul>` : ''}
+    ${s.fixes.length ? `<div class="fix-label">What changed</div><ul class="when-list">${s.fixes.map(f=>`<li><strong style="color:var(--accent2)">✓</strong> ${f}</li>`).join('')}</ul>` : ''}
+    <div class="norm-nav">
+      <button class="nnav-btn prev" onclick="goNorm(${normIdx-1})" ${normIdx===0?'disabled':''}>← Prev</button>
+      <button class="nnav-btn next" onclick="goNorm(${normIdx+1})" ${normIdx===normSteps.length-1?'disabled':''}>Next →</button>
+    </div>
+  `;
+
+  // visual
+  const vis = document.getElementById('norm-visual');
+  vis.innerHTML = '';
+  s.tables.forEach((tbl,ti) => {
+    if (ti > 0) { const arr = document.createElement('div'); arr.className='arrow-down'; arr.textContent=''; vis.appendChild(arr); }
+    const wrap = document.createElement('div'); wrap.className='vtbl';
+    const nm = document.createElement('div'); nm.className='vtbl-name';
+    nm.style.color = tbl.cls === 'hi-good' ? 'var(--accent2)' : tbl.cls === 'hi-move' ? 'var(--purple)' : 'var(--muted)';
+    nm.textContent = tbl.name || '';
+    wrap.appendChild(nm);
+    const table = document.createElement('table'); table.className='vt';
+    tbl.rows.forEach((row,ri) => {
+      const tr = document.createElement('tr');
+      row.forEach(cell => {
+        const el = document.createElement(ri===0?'th':'td');
+        el.innerHTML = cell;
+        tr.appendChild(el);
+      });
+      table.appendChild(tr);
+    });
+    wrap.appendChild(table);
+    vis.appendChild(wrap);
+  });
+}
+
+function goNorm(i) {
+  if (i < 0 || i >= normSteps.length) return;
+  normIdx = i;
+  renderNorm();
+}
+
+/* ═══════════════════════════════════
+   INIT
+═══════════════════════════════════ */
+window.addEventListener('load', () => {
+  buildStar();
+  renderNorm();
+});
+
+// nav active
+const secs = document.querySelectorAll('section[id]');
+window.addEventListener('scroll', () => {
+  let cur = '';
+  secs.forEach(s => { if (window.scrollY >= s.offsetTop - 80) cur = s.id; });
+  document.querySelectorAll('nav a[href^="#"]').forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#'+cur);
+  });
+});
+</script>
+</body>
+</html>
