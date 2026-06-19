@@ -917,11 +917,206 @@ function goNorm(i) {
 }
 
 /* ═══════════════════════════════════
+   SCHEMA DESIGNER
+═══════════════════════════════════ */
+const questions = [
+  { phase:'Phase 1 — Use case', text:'Is this system for transactions or analytics?', sub:'This determines whether to optimize for writes (OLTP) or reads (OLAP).', options:[
+    {label:'Transactions (app database, OLTP)',key:'oltp'},
+    {label:'Analytics / Reporting (OLAP)',key:'olap'},
+    {label:'Both — need historical audit trail',key:'vault'}
+  ]},
+  { phase:'Phase 2 — Grain', text:'What does one row represent?', sub:'Define the grain before designing any columns.', options:[
+    {label:'One transaction / event (order, click, payment)',key:'event'},
+    {label:'One entity snapshot (customer, product)',key:'entity'}
+  ]},
+  { phase:'Phase 3 — Dimensions', text:'What do you want to slice and filter data by?', sub:'These become your dimension tables.', options:[
+    {label:'Date + Customer + Product (standard)',key:'standard_dims'},
+    {label:'Date + Customer + Product + Region + Channel',key:'many_dims'},
+    {label:'Just date and one dimension',key:'few_dims'}
+  ]},
+  { phase:'Phase 4 — Hierarchy', text:'Do any dimensions have sub-categories or hierarchies?', sub:'e.g. Product → Category → Department', options:[
+    {label:'Yes — dimensions have hierarchies',key:'hierarchical'},
+    {label:'No — dimensions are flat lists',key:'flat'}
+  ]},
+  { phase:'Phase 5 — Change', text:'Does dimension data change over time and do you need history?', sub:'e.g. customer moves city, product changes category', options:[
+    {label:'Yes — need full history (SCD Type 2)',key:'scd2'},
+    {label:'No — just overwrite is fine (SCD Type 1)',key:'scd1'},
+    {label:'Data rarely or never changes',key:'static'}
+  ]}
+];
+
+let answers = [], currentQ = 0, designerTables = {};
+
+const schemaResults = {
+  oltp:        {schema:'3NF — Normalized (Inmon)',  why:'Transactional systems need data integrity, fast writes, and no redundancy. Normalize to 3NF.'},
+  vault:       {schema:'Data Vault 2.0',            why:'You need both transactions and full audit history. Data Vault handles this with Hubs, Links, and Satellites.'},
+  default_star:{schema:'Star Schema (Kimball)',     why:'Analytics workload with standard dimensions — Star Schema gives the fastest query performance with the simplest structure.'},
+  snowflake:   {schema:'Snowflake Schema',          why:'Hierarchical dimensions benefit from snowflaking — reduces redundancy while keeping analytical power.'},
+  obt:         {schema:'One Big Table (OBT)',       why:'Few dimensions and simple queries — flatten everything into one wide table for maximum simplicity.'},
+};
+
+function renderProgress() {
+  const prog = document.getElementById('q-progress');
+  prog.innerHTML = '';
+  for (let i = 0; i < questions.length; i++) {
+    const d = document.createElement('div');
+    d.className = 'q-dot' + (i < answers.length ? ' done' : i === currentQ ? ' active' : '');
+    prog.appendChild(d);
+  }
+}
+
+function renderQuestion() {
+  if (currentQ >= questions.length) { showResult(); return; }
+  if (currentQ === 1 && (answers[0] === 'oltp' || answers[0] === 'vault')) { showResult(); return; }
+  const q = questions[currentQ];
+  document.getElementById('q-phase').textContent = q.phase;
+  document.getElementById('q-text').textContent  = q.text;
+  document.getElementById('q-sub').textContent   = q.sub;
+  const opts = document.getElementById('q-options');
+  opts.innerHTML = '';
+  q.options.forEach(o => {
+    const btn = document.createElement('button');
+    btn.className = 'q-opt'; btn.textContent = o.label;
+    btn.onclick = () => pickOption(o.key, btn);
+    opts.appendChild(btn);
+  });
+  document.getElementById('q-back').style.display = currentQ > 0 ? 'block' : 'none';
+  renderProgress();
+}
+
+function pickOption(key, btn) {
+  document.querySelectorAll('.q-opt').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  answers[currentQ] = key;
+  updateDesignerERD();
+  setTimeout(() => { currentQ++; renderQuestion(); }, 420);
+}
+
+function goBack() {
+  if (currentQ > 0) { currentQ--; answers.pop(); renderQuestion(); updateDesignerERD(); }
+}
+
+function showResult() {
+  let result;
+  if (answers[0] === 'oltp') result = schemaResults.oltp;
+  else if (answers[0] === 'vault') result = schemaResults.vault;
+  else if (answers[3] === 'hierarchical') result = schemaResults.snowflake;
+  else if (answers[2] === 'few_dims') result = schemaResults.obt;
+  else result = schemaResults.default_star;
+  document.getElementById('result-box').style.display = 'block';
+  document.getElementById('result-schema').textContent = '→ Recommended: ' + result.schema;
+  document.getElementById('result-why').textContent = result.why;
+  document.getElementById('q-phase').textContent = 'Complete';
+  document.getElementById('q-text').textContent  = 'Schema design complete!';
+  document.getElementById('q-sub').textContent   = 'See your recommended schema below and the ERD on the right.';
+  document.getElementById('q-options').innerHTML = '';
+  document.getElementById('q-back').style.display = 'block';
+  renderProgress();
+}
+
+function resetDesigner() {
+  answers = []; currentQ = 0; designerTables = {};
+  document.getElementById('result-box').style.display = 'none';
+  document.getElementById('erd-canvas').querySelectorAll('.erd-table').forEach(t => t.remove());
+  document.getElementById('erd-svg').innerHTML = '';
+  document.getElementById('erd-empty').style.display = 'flex';
+  renderQuestion();
+}
+
+function makeTable(id, cls, title, rows, x, y) {
+  if (document.getElementById('erd-' + id)) return;
+  document.getElementById('erd-empty').style.display = 'none';
+  const div = document.createElement('div');
+  div.className = 'erd-table ' + cls; div.id = 'erd-' + id;
+  div.style.left = x+'px'; div.style.top = y+'px';
+  div.style.opacity = '0'; div.style.transform = 'scale(0.85)';
+  let html = '<div class="erd-thead">' + title + '</div>';
+  rows.forEach(r => { html += '<div class="erd-row'+(r.pk?' pk':r.fk?' fk':'')+'">' + r.col + '</div>'; });
+  div.innerHTML = html;
+  document.getElementById('erd-canvas').appendChild(div);
+  setTimeout(() => { div.style.opacity = '1'; div.style.transform = 'scale(1)'; }, 50);
+}
+
+function removeTable(id) {
+  const el = document.getElementById('erd-' + id);
+  if (el) { el.style.opacity = '0'; setTimeout(() => el.remove(), 400); }
+}
+
+function drawLines() {
+  const svg = document.getElementById('erd-svg');
+  svg.innerHTML = '';
+  const canvas = document.getElementById('erd-canvas');
+  const fact = document.getElementById('erd-fact');
+  if (!fact) return;
+  const cr = canvas.getBoundingClientRect(), fr = fact.getBoundingClientRect();
+  const fx = fr.left-cr.left+fr.width/2, fy = fr.top-cr.top+fr.height/2;
+  ['dim_date','dim_customer','dim_product','dim_region','dim_channel','dim_cat','dim_dept'].forEach(id => {
+    const el = document.getElementById('erd-'+id);
+    if (!el) return;
+    const er = el.getBoundingClientRect();
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',fx); line.setAttribute('y1',fy);
+    line.setAttribute('x2',er.left-cr.left+er.width/2); line.setAttribute('y2',er.top-cr.top+er.height/2);
+    line.setAttribute('stroke','#30363d'); line.setAttribute('stroke-width','1.5'); line.setAttribute('stroke-dasharray','4 3');
+    svg.appendChild(line);
+  });
+}
+
+function updateDesignerERD() {
+  const a = answers;
+  setTimeout(() => {
+    if (a[0]==='oltp') {
+      removeTable('fact'); removeTable('dim_date'); removeTable('dim_customer'); removeTable('dim_product');
+      makeTable('oltp_order','dim','Orders',[{col:'order_id PK',pk:true},{col:'customer_id FK',fk:true},{col:'product_id FK',fk:true},{col:'quantity'},{col:'created_at'}],10,10);
+      makeTable('oltp_cust','fact','Customers',[{col:'customer_id PK',pk:true},{col:'name'},{col:'email'},{col:'city'}],180,10);
+      makeTable('oltp_prod','dim','Products',[{col:'product_id PK',pk:true},{col:'name'},{col:'price'},{col:'category_id FK',fk:true}],180,160);
+      makeTable('oltp_cat','dim','Categories',[{col:'category_id PK',pk:true},{col:'name'}],10,200);
+    } else if (a[0]==='vault') {
+      makeTable('hub_cust','fact','Hub_Customer',[{col:'hub_id PK',pk:true},{col:'customer_id (BK)',fk:true},{col:'load_date'}],10,10);
+      makeTable('hub_order','dim','Hub_Order',[{col:'hub_id PK',pk:true},{col:'order_id (BK)',fk:true},{col:'load_date'}],180,10);
+      makeTable('link','dim','Link_CustOrder',[{col:'link_id PK',pk:true},{col:'hub_cust_id FK',fk:true},{col:'hub_order_id FK',fk:true}],90,160);
+      makeTable('sat','dim','Sat_Customer',[{col:'hub_id FK',fk:true},{col:'name'},{col:'city'},{col:'load_date'},{col:'end_date'}],10,290);
+    } else if (a[0]==='olap') {
+      if (!document.getElementById('erd-fact'))
+        makeTable('fact','fact','fact_sales',[{col:'order_id PK',pk:true},{col:'date_id FK',fk:true},{col:'customer_id FK',fk:true},{col:'product_id FK',fk:true},{col:'revenue'},{col:'quantity'}],120,140);
+      if (a[1]) {
+        makeTable('dim_date','dim','dim_date',[{col:'date_id PK',pk:true},{col:'date'},{col:'month'},{col:'year'}],10,10);
+        makeTable('dim_customer','dim','dim_customer',[{col:'customer_id PK',pk:true},{col:'name'},{col:'city'}],230,10);
+      }
+      if (a[2]) {
+        makeTable('dim_product','dim','dim_product',[{col:'product_id PK',pk:true},{col:'name'},{col:'price'}],10,290);
+        if (a[2]==='many_dims') {
+          makeTable('dim_region','dim','dim_region',[{col:'region_id PK',pk:true},{col:'name'},{col:'country'}],230,290);
+          makeTable('dim_channel','dim','dim_channel',[{col:'channel_id PK',pk:true},{col:'name'},{col:'type'}],10,420);
+        }
+      }
+      if (a[3]==='hierarchical') {
+        makeTable('dim_cat','dim','dim_category',[{col:'category_id PK',pk:true},{col:'name'},{col:'dept_id FK',fk:true}],230,420);
+        makeTable('dim_dept','dim','dim_department',[{col:'dept_id PK',pk:true},{col:'name'}],10,520);
+      }
+      if (a[4]==='scd2') {
+        const el = document.getElementById('erd-dim_customer');
+        if (el && !el.querySelector('.scd-badge')) {
+          el.classList.add('scd');
+          ['effective_date','end_date'].forEach(col => {
+            const r = document.createElement('div');
+            r.className = 'erd-row scd-badge'; r.style.color = 'var(--amber)'; r.textContent = col;
+            el.appendChild(r);
+          });
+        }
+      }
+      drawLines();
+    }
+  }, 100);
+}
+
+/* ═══════════════════════════════════
    INIT
 ═══════════════════════════════════ */
 window.addEventListener('load', () => {
   buildStar();
   renderNorm();
+  renderQuestion();
 });
 
 // NAV ACTIVE
