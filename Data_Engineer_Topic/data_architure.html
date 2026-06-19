@@ -131,15 +131,23 @@ footer a{color:var(--blue);text-decoration:none;}
 
 <nav>
   <a href="#" class="nav-brand">DE Guide</a>
-  <a href="#what">What is a Pipeline</a>
+  <a href="#what">Layers</a>
   <a href="#etl">ETL vs ELT</a>
   <a href="#batch">Batch vs Stream</a>
   <a href="#ingestion">Ingestion</a>
   <a href="#arch">Architecture</a>
-  <a href="#storage">Lakes vs DW</a>
+  <a href="#storage">Storage</a>
+  <a href="#transform">Transform</a>
+  <a href="#mesh">Mesh & Fabric</a>
+  <a href="#ailayer">AI Layer</a>
   <a href="#principles">Principles</a>
   <a href="#contracts">Contracts</a>
   <a href="#monitoring">Monitoring</a>
+  <a href="#orchestration">Orchestration</a>
+  <a href="#governance">Governance</a>
+  <a href="#security">Security</a>
+  <a href="#cost">Cost</a>
+  <a href="#tools">Tools</a>
   <a href="#stacks">Real Stacks</a>
   <a href="#interviews">Interviews</a>
 </nav>
@@ -158,16 +166,71 @@ footer a{color:var(--blue);text-decoration:none;}
   </div>
 </div>
 
-<!-- ─── 1. WHAT IS A PIPELINE ─── -->
+<!-- ─── 1. THE ACTUAL LAYERS ─── -->
 <section id="what">
   <div class="sec-label">Section 01</div>
-  <h2>What is a <span>Data Pipeline?</span></h2>
-  <p>A data pipeline is a series of steps that <strong>move and transform data</strong> from where it's created to where it's used — automatically, reliably, and at scale.</p>
+  <h2>The Real Layers of <span>Data Architecture</span></h2>
+  <p>Every data system — no matter how simple or complex — moves data through a set of layers. Understanding these layers is the foundation of everything else on this page.</p>
 
   <div class="diagram-wrap">
-    <div class="diagram-header"><span>Core pipeline flow</span></div>
-    <div class="diagram-scroll"><svg class="diag" viewBox="0 0 700 80" style="width:100%;min-width:500px;" id="svg-core"></svg></div>
+    <div class="diagram-header"><span>The 6 core layers — hover each for details</span></div>
+    <div class="diagram-scroll"><svg class="diag" viewBox="0 0 720 90" style="width:100%;min-width:560px;" id="svg-core"></svg></div>
+    <div class="legend">
+      <div class="leg-item"><div class="leg-dot" style="background:var(--blue)"></div>Source</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--purple)"></div>Ingestion</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--bronze)"></div>Storage</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--amber)"></div>Transform</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--silver)"></div>Serving</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--green)"></div>Consume</div>
+    </div>
   </div>
+
+  <div class="grid2" style="margin-top:1rem;">
+    <div class="card">
+      <div class="card-title" style="color:var(--blue)">Source</div>
+      <p style="font-size:.82rem;">Where data originates. App databases (Postgres, MySQL), SaaS tools (Salesforce, Stripe), event streams (Kafka), files (S3, SFTP), APIs, IoT sensors.</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--purple)">Ingestion</div>
+      <p style="font-size:.82rem;">Moving data from source into your system. Batch (scheduled pulls), streaming (continuous), CDC (log-based change capture). Tools: Fivetran, Airbyte, Debezium, Kafka.</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--bronze)">Storage</div>
+      <p style="font-size:.82rem;">Where raw and processed data lives. Data lake (S3/GCS), data warehouse (Snowflake/BigQuery), lakehouse (Delta Lake/Iceberg), vector store (Pinecone), time series DB (InfluxDB).</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--amber)">Transform</div>
+      <p style="font-size:.82rem;">Cleaning, joining, aggregating, enriching. SQL transforms (dbt), large-scale processing (Spark), real-time (Flink), federated queries (Trino). Raw → clean → business-ready.</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--silver)">Serving</div>
+      <p style="font-size:.82rem;">Making data accessible. Data warehouse for analysts, APIs for apps, feature store for ML models, semantic layer for BI tools. This is where data becomes useful.</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--green)">Consume</div>
+      <p style="font-size:.82rem;">The end users and systems. BI tools (Tableau, Looker), data scientists (notebooks), ML models (inference), operational apps (reverse ETL back to Salesforce).</p>
+    </div>
+  </div>
+
+  <div class="callout amber" style="margin-top:1.5rem;">⚠ <strong>These layers are not always separate systems.</strong> In a small startup, storage + transform + serving might all be one Snowflake account. In an enterprise, each layer might be 10 different tools. The layers are logical — not always physical.</div>
+
+  <h3>// Data type changes everything</h3>
+  <p>The architecture you need depends entirely on <strong>what kind of data</strong> you're working with. The same 6 layers exist — but the tools and patterns are completely different.</p>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Data Type</th><th>Format</th><th>Storage</th><th>Processing</th><th>Example use case</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Structured</strong></td><td>Rows/columns, SQL</td><td>Data warehouse</td><td>dbt, SQL</td><td>Sales reports, finance dashboards</td></tr>
+      <tr><td><strong>Semi-structured</strong></td><td>JSON, XML, Avro, Parquet</td><td>Data lake / lakehouse</td><td>Spark, dbt</td><td>App event logs, API responses</td></tr>
+      <tr><td><strong>Logs</strong></td><td>Text, JSON lines</td><td>Lake or ELK stack</td><td>Stream ingest → parse → aggregate</td><td>Server logs, clickstream</td></tr>
+      <tr><td><strong>Documents / PDFs</strong></td><td>Binary, text</td><td>Object store → vector store</td><td>LLM / NLP → extract → structure</td><td>Contracts, invoices, reports</td></tr>
+      <tr><td><strong>Images</strong></td><td>JPEG, PNG, TIFF</td><td>Object store (S3/GCS)</td><td>CV model → metadata to DW</td><td>Product images, medical scans</td></tr>
+      <tr><td><strong>Video / Audio</strong></td><td>MP4, WAV, MP3</td><td>Object store</td><td>Transcribe → text pipeline</td><td>Call recordings, surveillance</td></tr>
+      <tr><td><strong>Time series / IoT</strong></td><td>Sensor readings, metrics</td><td>InfluxDB, TimescaleDB, QuestDB</td><td>Downsampling, anomaly detection</td><td>Manufacturing sensors, stock prices</td></tr>
+      <tr><td><strong>Graph / Relationships</strong></td><td>Nodes + edges</td><td>Neo4j, Amazon Neptune</td><td>Graph traversal, path finding</td><td>Fraud networks, recommendations</td></tr>
+      <tr><td><strong>Multimodal / Mixed</strong></td><td>All of the above</td><td>Lake as landing zone</td><td>Route by type → separate pipelines</td><td>E-commerce (orders + images + reviews)</td></tr>
+    </tbody>
+  </table></div>
 
   <h3>// Pipeline vs Workflow</h3>
   <div class="grid2">
@@ -276,6 +339,32 @@ footer a{color:var(--blue);text-decoration:none;}
     <div class="dt-body" id="dt-batch-body"></div>
   </div>
 
+  <h3>// When to use each — plain English</h3>
+  <div class="grid3">
+    <div class="card">
+      <div class="card-title" style="color:var(--green)">Use Batch when...</div>
+      <p style="font-size:.82rem;">Daily or hourly reports are acceptable. Data arrives in bulk (nightly DB dumps, daily file drops). Team is small and prefers simple operations. Cost is a constraint — batch is cheapest. Most reporting, dashboards, and DW loads are batch.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Tools: Airflow + dbt + Spark on schedule</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--amber)">Use Micro-batch when...</div>
+      <p style="font-size:.82rem;">Stakeholders need data fresher than hourly but don't actually need sub-minute latency. "Real-time dashboards" that refresh every 5-15 minutes. This covers 80% of "real-time" requirements in practice — without streaming complexity.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Tools: Spark Structured Streaming on 5-15 min intervals</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--warn)">Use Streaming when...</div>
+      <p style="font-size:.82rem;">Latency under 1 minute is a hard, non-negotiable business requirement. Fraud detection (act in milliseconds or money is gone). Live inventory systems. Real-time personalization. Team has dedicated streaming expertise. Budget supports the complexity.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Tools: Kafka + Flink or Spark Streaming</p>
+    </div>
+  </div>
+
+  <h3>// Decision tool — which processing mode?</h3>
+  <div class="callout" style="margin-bottom:1rem;">The 3 questions below help you pick the right mode. Each question targets a different dimension: <strong>latency need</strong> (what the business actually requires), <strong>team capability</strong> (what you can operate), and <strong>failure impact</strong> (what happens when it breaks). Answer honestly — most teams overestimate their streaming needs.</div>
+  <div class="decision-tool" id="dt-batch">
+    <div class="dt-header">Answer 3 questions → get a recommendation</div>
+    <div class="dt-body" id="dt-batch-body"></div>
+  </div>
+
   <div class="callout warn">⚠ <strong>The 10x complexity jump:</strong> Streaming requires handling out-of-order events, watermarks, state management, exactly-once semantics, and fault tolerance. Only use true streaming when latency under 1 minute is a hard business requirement.</div>
 </section>
 
@@ -293,11 +382,12 @@ footer a{color:var(--blue);text-decoration:none;}
 
   <div id="ing-patterns" class="tab-pane active">
     <div class="grid2">
-      <div class="card"><div class="card-title">Full Load</div><p style="font-size:.82rem;">Copy the entire source table every run. Simple but expensive at scale.</p><span class="tag good">Simple</span><span class="tag bad">Slow at scale</span><span class="tag neutral">Small tables</span></div>
-      <div class="card"><div class="card-title">Incremental Load</div><p style="font-size:.82rem;">Only copy rows that changed since last run. Uses a watermark column (updated_at).</p><span class="tag good">Efficient</span><span class="tag bad">Misses deletes</span><span class="tag neutral">Most common</span></div>
-      <div class="card"><div class="card-title">CDC — Change Data Capture</div><p style="font-size:.82rem;">Read the database transaction log. Captures inserts, updates AND deletes in real time.</p><span class="tag good">Captures deletes</span><span class="tag good">Real-time</span><span class="tag bad">Complex setup</span></div>
-      <div class="card"><div class="card-title">Micro-batch</div><p style="font-size:.82rem;">Run incremental loads every few minutes instead of hourly/daily.</p><span class="tag good">Near real-time</span><span class="tag neutral">Spark Streaming</span></div>
-      <div class="card"><div class="card-title">Streaming</div><p style="font-size:.82rem;">Events flow continuously as they happen. Sub-second latency.</p><span class="tag good">Lowest latency</span><span class="tag bad">Most complex</span><span class="tag neutral">Kafka / Flink</span></div>
+      <div class="card"><div class="card-title">Batch</div><p style="font-size:.82rem;">Run a bulk extract on a schedule — hourly, daily, or weekly. Pull all data (or changed data) in one job. The most common pattern in real production pipelines. Simple to build, simple to debug.</p><span class="tag good">Simple</span><span class="tag good">Most common</span><span class="tag neutral">Airflow + dbt</span></div>
+      <div class="card"><div class="card-title">Full Load</div><p style="font-size:.82rem;">A type of batch — copy the <em>entire</em> source table every run, replacing what was there. Simple but gets expensive as tables grow. Use for small, slow-changing reference tables.</p><span class="tag good">Simple</span><span class="tag bad">Slow at scale</span><span class="tag neutral">Small tables</span></div>
+      <div class="card"><div class="card-title">Incremental Load</div><p style="font-size:.82rem;">A smarter batch — only copy rows that changed since last run. Uses a watermark column (updated_at or created_at). Most efficient pattern for large tables. Does not capture deletes.</p><span class="tag good">Efficient</span><span class="tag bad">Misses deletes</span><span class="tag neutral">Most common</span></div>
+      <div class="card"><div class="card-title">CDC — Change Data Capture</div><p style="font-size:.82rem;">Read the database transaction log (WAL/binlog). Captures inserts, updates AND deletes in real time. Best when you need deletes or sub-minute latency from a database source.</p><span class="tag good">Captures deletes</span><span class="tag good">Real-time</span><span class="tag bad">Complex setup</span></div>
+      <div class="card"><div class="card-title">Micro-batch</div><p style="font-size:.82rem;">Run incremental loads every few minutes instead of hourly/daily. Near real-time feel without full streaming complexity. Sweet spot for most "real-time" dashboard requirements.</p><span class="tag good">Near real-time</span><span class="tag neutral">Spark Streaming</span></div>
+      <div class="card"><div class="card-title">Streaming</div><p style="font-size:.82rem;">Events flow continuously as they happen. Sub-second latency. Required for fraud detection, live inventory, real-time personalization. 10x more complex to build and operate than batch.</p><span class="tag good">Lowest latency</span><span class="tag bad">Most complex</span><span class="tag neutral">Kafka / Flink</span></div>
     </div>
   </div>
 
@@ -404,23 +494,198 @@ footer a{color:var(--blue);text-decoration:none;}
   </div>
 </section>
 
-<!-- ─── 6. LAKES vs DW ─── -->
+<!-- ─── 6. STORAGE LAYER ─── -->
 <section id="storage">
   <div class="sec-label">Section 06</div>
-  <h2>Data Lakes vs Warehouses vs <span>Lakehouse</span></h2>
+  <h2>The Storage <span>Layer</span></h2>
+  <p>Storage is not one thing. The right storage system depends on your data type, query pattern, latency need, and budget. Most modern architectures use multiple storage systems for different purposes.</p>
+
   <div class="tbl-wrap"><table>
-    <thead><tr><th>Property</th><th>Data Lake</th><th>Data Warehouse</th><th>Lakehouse</th></tr></thead>
+    <thead><tr><th>Storage Type</th><th>Best for</th><th>Schema</th><th>ACID</th><th>Query speed</th><th>Cost</th><th>Examples</th></tr></thead>
     <tbody>
-      <tr><td>Data types</td><td>Any (structured, semi, unstructured)</td><td>Structured only</td><td>Any</td></tr>
-      <tr><td>Schema</td><td>Schema on read</td><td>Schema on write</td><td>Both</td></tr>
-      <tr><td>Query speed</td><td style="color:var(--warn)">Slow</td><td style="color:var(--green)">Fast</td><td style="color:var(--green)">Fast</td></tr>
-      <tr><td>ACID transactions</td><td style="color:var(--warn)">No</td><td style="color:var(--green)">Yes</td><td style="color:var(--green)">Yes (Delta/Iceberg)</td></tr>
-      <tr><td>Cost</td><td style="color:var(--green)">Very cheap storage</td><td style="color:var(--warn)">Expensive</td><td style="color:var(--green)">Cheap storage</td></tr>
-      <tr><td>ML workloads</td><td style="color:var(--green)">Good</td><td style="color:var(--warn)">Poor</td><td style="color:var(--green)">Good</td></tr>
-      <tr><td>Examples</td><td>S3, GCS, ADLS</td><td>Snowflake, BigQuery, Redshift</td><td>Databricks, Delta Lake, Iceberg</td></tr>
+      <tr><td><strong>Data Lake</strong></td><td>Any data type, raw landing zone, ML</td><td>Schema on read</td><td style="color:var(--warn)">No</td><td style="color:var(--warn)">Slow</td><td style="color:var(--green)">Very cheap</td><td>S3, GCS, ADLS Gen2</td></tr>
+      <tr><td><strong>Data Warehouse</strong></td><td>Structured analytics, BI, SQL</td><td>Schema on write</td><td style="color:var(--green)">Yes</td><td style="color:var(--green)">Fast</td><td style="color:var(--warn)">Expensive</td><td>Snowflake, BigQuery, Redshift</td></tr>
+      <tr><td><strong>Lakehouse</strong></td><td>Best of both — lake + warehouse</td><td>Both</td><td style="color:var(--green)">Yes (Delta/Iceberg)</td><td style="color:var(--green)">Fast</td><td style="color:var(--green)">Cheap storage</td><td>Databricks, Delta Lake, Iceberg on S3</td></tr>
+      <tr><td><strong>Time Series DB</strong></td><td>Sensor data, metrics, IoT, stock prices</td><td>Fixed time-indexed</td><td style="color:var(--green)">Yes</td><td style="color:var(--green)">Very fast for time range</td><td style="color:var(--green)">Cheap</td><td>InfluxDB, TimescaleDB, QuestDB</td></tr>
+      <tr><td><strong>Vector Store</strong></td><td>Embeddings, semantic search, RAG / AI</td><td>Embedding vectors</td><td style="color:var(--muted)">Partial</td><td style="color:var(--green)">Fast similarity search</td><td style="color:var(--amber)">Medium</td><td>Pinecone, Weaviate, pgvector, Qdrant</td></tr>
+      <tr><td><strong>Graph DB</strong></td><td>Relationships, fraud networks, recommendations</td><td>Nodes + edges</td><td style="color:var(--green)">Yes</td><td style="color:var(--green)">Fast traversal</td><td style="color:var(--amber)">Medium</td><td>Neo4j, Amazon Neptune, TigerGraph</td></tr>
+      <tr><td><strong>Object Store</strong></td><td>Files, images, video, audio, raw blobs</td><td>None</td><td style="color:var(--warn)">No</td><td style="color:var(--warn)">Slow (no query)</td><td style="color:var(--green)">Cheapest</td><td>S3, GCS, Azure Blob, MinIO</td></tr>
+      <tr><td><strong>Operational DB</strong></td><td>App data, transactional, OLTP</td><td>Schema on write</td><td style="color:var(--green)">Yes</td><td style="color:var(--green)">Fast for row lookups</td><td style="color:var(--amber)">Medium</td><td>Postgres, MySQL, MongoDB, DynamoDB</td></tr>
     </tbody>
   </table></div>
-  <div class="callout green">✓ <strong>Lakehouse = best of both.</strong> Cheap object storage (like S3) + ACID transactions + fast SQL queries via table formats (Delta Lake, Apache Iceberg). This is where the industry is heading.</div>
+
+  <div class="callout green">✓ <strong>Lakehouse is where the industry is heading.</strong> Cheap object storage (S3/GCS) + ACID transactions + fast SQL queries via open table formats (Delta Lake, Apache Iceberg, Apache Hudi). You get ML-friendly raw files AND fast analytical queries in one system.</div>
+
+  <h3>// Table formats — what makes a Lakehouse work</h3>
+  <div class="grid3">
+    <div class="card">
+      <div class="card-title">Delta Lake</div>
+      <p style="font-size:.82rem;">Open-source table format by Databricks. ACID transactions on top of Parquet files in S3/GCS. Best ecosystem integration with Spark and Databricks.</p>
+      <span class="tag good">Most mature</span><span class="tag neutral">Databricks native</span>
+    </div>
+    <div class="card">
+      <div class="card-title">Apache Iceberg</div>
+      <p style="font-size:.82rem;">Open standard backed by Netflix, Apple, Netflix. Vendor-neutral. Works with Spark, Flink, Trino, BigQuery, Snowflake. The emerging industry standard.</p>
+      <span class="tag good">Vendor neutral</span><span class="tag good">Growing fast</span>
+    </div>
+    <div class="card">
+      <div class="card-title">Apache Hudi</div>
+      <p style="font-size:.82rem;">Created by Uber. Specialises in upserts and incremental processing at scale. Strong CDC integration. Less common than Delta/Iceberg but powerful for update-heavy workloads.</p>
+      <span class="tag neutral">Upsert focused</span><span class="tag neutral">Uber origin</span>
+    </div>
+  </div>
+
+  <h3>// Zero ETL — when you don't need a pipeline at all</h3>
+  <div class="callout amber">⚡ <strong>Zero ETL</strong> eliminates the ingestion pipeline entirely — data replicates automatically from source to warehouse in near real-time with no custom code. Only possible when source and destination are same-vendor or have native integration.<br><br>
+  Examples: <strong>Aurora → Redshift</strong> (AWS), <strong>DynamoDB → Redshift</strong> (AWS), <strong>Salesforce → BigQuery</strong> (Google). When this option exists, always evaluate it first — it removes an entire layer of maintenance.</div>
+</section>
+
+<!-- ─── NEW: TRANSFORM LAYER ─── -->
+<section id="transform">
+  <div class="sec-label">Section 06b</div>
+  <h2>The Transform <span>Layer</span></h2>
+  <p>Transformation is where raw data becomes useful. The right tool depends on your data volume, latency requirement, and whether you're doing batch or streaming transforms.</p>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Tool</th><th>Best for</th><th>Language</th><th>Latency</th><th>Scale</th><th>When to use</th></tr></thead>
+    <tbody>
+      <tr><td><strong>dbt</strong></td><td>SQL transforms in warehouse, Bronze→Gold</td><td>SQL + Jinja</td><td>Batch</td><td>Warehouse scale</td><td>Most analytics transforms. If your warehouse can handle it, use dbt. Version control, testing, docs built in.</td></tr>
+      <tr><td><strong>Apache Spark</strong></td><td>Large-scale batch processing, ML feature prep</td><td>Python/Scala/SQL</td><td>Minutes</td><td>Petabyte</td><td>When data is too large for the warehouse. Complex joins, ML pipelines, processing raw files in the lake.</td></tr>
+      <tr><td><strong>Apache Flink</strong></td><td>Real-time streaming transforms</td><td>Java/Python/SQL</td><td>Milliseconds</td><td>Very high</td><td>When you need streaming aggregations, real-time enrichment, or complex event processing with state.</td></tr>
+      <tr><td><strong>Trino / Presto</strong></td><td>Federated queries across multiple sources</td><td>SQL</td><td>Seconds</td><td>Large</td><td>Query data lake + warehouse + operational DB in one SQL query without moving data. Great for exploration.</td></tr>
+      <tr><td><strong>Databricks</strong></td><td>Unified Spark + ML + Delta Lake platform</td><td>Python/SQL/Scala</td><td>Batch + Stream</td><td>Petabyte</td><td>When you need Spark, Delta Lake, and ML in one managed platform. Higher cost but reduces ops burden.</td></tr>
+      <tr><td><strong>Dataform / SQLMesh</strong></td><td>dbt alternatives, native BigQuery / advanced features</td><td>SQL</td><td>Batch</td><td>Warehouse scale</td><td>Dataform is Google's dbt equivalent native to BigQuery. SQLMesh adds column-level lineage and smarter incremental.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>// The golden rule — transform as late as possible</h3>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title" style="color:var(--warn)">Anti-pattern</div>
+      <p style="font-size:.82rem;">Transform before loading (ETL). You lose the raw data. If business logic changes, you have to re-extract from source. Transformation bugs corrupt your only copy.</p>
+    </div>
+    <div class="card hl">
+      <div class="card-title" style="color:var(--green)">Modern pattern (ELT)</div>
+      <p style="font-size:.82rem;">Load raw first, transform inside the warehouse/lake. Raw data is always preserved in Bronze. You can re-run transforms any time. Business logic changes don't require re-ingestion.</p>
+    </div>
+  </div>
+
+  <div class="callout green">✓ <strong>dbt for most things.</strong> If your data fits in a cloud warehouse (Snowflake/BigQuery/Redshift) and your transforms are SQL — use dbt. It handles 90% of real-world transform needs with the best developer experience. Only reach for Spark when dbt genuinely can't handle the scale or complexity.</div>
+</section>
+
+<!-- ─── NEW: DATA MESH & FABRIC ─── -->
+<section id="mesh">
+  <div class="sec-label">Section 07b</div>
+  <h2>Data Mesh & <span>Data Fabric</span></h2>
+  <p>These are often confused. They solve different problems — one is an <strong>organisational model</strong>, the other is a <strong>technology layer</strong>.</p>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('mesh','mesh',this)">Data Mesh</button>
+    <button class="tab-btn" onclick="tab('mesh','fabric',this)">Data Fabric</button>
+    <button class="tab-btn" onclick="tab('mesh','compare',this)">Mesh vs Fabric</button>
+  </div>
+
+  <div id="mesh-mesh" class="tab-pane active">
+    <p><strong>Data Mesh</strong> is a decentralised approach where domain teams (Sales, Finance, Marketing, Product) own their data end-to-end — ingestion, storage, transformation, and serving. There is no central data team as a bottleneck.</p>
+    <h3>// The 4 principles of Data Mesh</h3>
+    <div class="grid2">
+      <div class="card"><div class="card-title">1. Domain Ownership</div><p style="font-size:.82rem;">Each business domain owns its data pipeline end-to-end. The Sales team owns the sales data product. They build it, maintain it, and are accountable for its quality. No central team is a middleman.</p></div>
+      <div class="card"><div class="card-title">2. Data as a Product</div><p style="font-size:.82rem;">Each domain treats its data output as a product — with an owner, documentation, SLAs, and quality standards. Other teams are the consumers. The domain team is responsible for keeping the product useful.</p></div>
+      <div class="card"><div class="card-title">3. Self-serve Platform</div><p style="font-size:.82rem;">A central platform team (not data team) provides the infrastructure — storage, compute, orchestration, governance tooling — so domain teams can build pipelines without needing platform engineering skills.</p></div>
+      <div class="card"><div class="card-title">4. Federated Governance</div><p style="font-size:.82rem;">Global standards (naming conventions, PII rules, SLA expectations) are set centrally. Domain teams apply them locally. Governance without centralisation. Think "federal law + local implementation."</p></div>
+    </div>
+    <div class="grid2" style="margin-top:1rem;">
+      <div class="card"><div class="card-title" style="color:var(--green)">When Mesh works</div><p style="font-size:.82rem;">Large org (50+ engineers). Multiple autonomous domain teams. Central data team is a bottleneck. Domains have different data needs and cadences. Leadership buy-in for org change.</p></div>
+      <div class="card"><div class="card-title" style="color:var(--warn)">When Mesh fails</div><p style="font-size:.82rem;">Small team — overhead kills productivity. Domain teams lack data engineering skills. No self-serve platform exists yet. Organisation isn't structured around clear domains. Mesh is an org transformation, not just a tech choice.</p></div>
+    </div>
+  </div>
+
+  <div id="mesh-fabric" class="tab-pane">
+    <p><strong>Data Fabric</strong> is a technology architecture — an active metadata layer that automatically connects, integrates, and governs data across all your systems regardless of where it lives.</p>
+    <div class="callout">💡 If Data Mesh asks "who owns the data?", Data Fabric asks "how do we make all data accessible everywhere automatically?"</div>
+    <h3>// What Data Fabric does</h3>
+    <div class="grid2">
+      <div class="card"><div class="card-title">Active Metadata</div><p style="font-size:.82rem;">Continuously scans all data sources, automatically discovers schemas, relationships, and data lineage. Metadata drives decisions — e.g. automatically classifying PII, suggesting joins.</p></div>
+      <div class="card"><div class="card-title">Unified Access Layer</div><p style="font-size:.82rem;">One query interface across data warehouse, data lake, operational databases, and SaaS tools. Users don't need to know where data physically lives.</p></div>
+      <div class="card"><div class="card-title">Automated Integration</div><p style="font-size:.82rem;">ML-powered recommendations for how to join, transform, and integrate data. Reduces manual pipeline development. Learns from usage patterns.</p></div>
+      <div class="card"><div class="card-title">Intelligent Governance</div><p style="font-size:.82rem;">Automatic PII detection, policy enforcement, access control across all systems. One governance policy applied everywhere without manual configuration per system.</p></div>
+    </div>
+    <div class="tbl-wrap" style="margin-top:1rem;"><table>
+      <thead><tr><th>Vendor</th><th>Product</th><th>Strength</th></tr></thead>
+      <tbody>
+        <tr><td>Informatica</td><td>Intelligent Data Management Cloud</td><td>Most mature, enterprise-grade</td></tr>
+        <tr><td>IBM</td><td>IBM Cloud Pak for Data</td><td>Deep integration with IBM stack</td></tr>
+        <tr><td>Talend</td><td>Talend Data Fabric</td><td>Strong data quality + integration</td></tr>
+        <tr><td>Microsoft</td><td>Azure Purview + Fabric</td><td>Native Azure integration</td></tr>
+        <tr><td>Denodo</td><td>Denodo Platform</td><td>Virtualisation-first approach</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div id="mesh-compare" class="tab-pane">
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Dimension</th><th>Data Mesh</th><th>Data Fabric</th></tr></thead>
+      <tbody>
+        <tr><td>What it is</td><td>Organisational model / philosophy</td><td>Technology architecture / platform</td></tr>
+        <tr><td>Problem solved</td><td>Central data team bottleneck, domain ownership</td><td>Data silos, manual integration, governance at scale</td></tr>
+        <tr><td>Who drives it</td><td>Leadership, org design</td><td>Platform/infrastructure teams</td></tr>
+        <tr><td>Key idea</td><td>Decentralise ownership of data products</td><td>Centralise access via intelligent metadata layer</td></tr>
+        <tr><td>Can they coexist?</td><td colspan="2" style="color:var(--green)">Yes — Data Fabric can be the self-serve platform that enables Data Mesh</td></tr>
+        <tr><td>Best for</td><td>Large enterprises with autonomous domains</td><td>Enterprises with heterogeneous legacy systems</td></tr>
+        <tr><td>Risk</td><td>Requires massive org change</td><td>Vendor lock-in, high cost, complexity</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- ─── NEW: AI LAYER ─── -->
+<section id="ailayer">
+  <div class="sec-label">Section 08 — New</div>
+  <h2>The <span>AI Layer</span></h2>
+  <p>Modern data architectures now include a dedicated AI layer that didn't exist 3 years ago. It sits between your transform layer and your serving layer — turning processed data into intelligence.</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-header"><span>Where the AI layer fits</span></div>
+    <div class="diagram-scroll"><svg class="diag" id="svg-ailayer" viewBox="0 0 720 90" style="width:100%;min-width:560px;"></svg></div>
+  </div>
+
+  <div class="grid2" style="margin-top:1rem;">
+    <div class="card">
+      <div class="card-title" style="color:var(--purple)">Feature Store</div>
+      <p style="font-size:.82rem;">Stores ML features — pre-computed, versioned, and shared across models. Solves the "training-serving skew" problem where features computed differently at train vs inference time. <strong>Tools:</strong> Feast, Tecton, Vertex Feature Store, Hopsworks.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Use when: multiple ML models share the same features, or you need consistent features at training and inference time.</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--blue)">Vector Store</div>
+      <p style="font-size:.82rem;">Stores embedding vectors — numerical representations of text, images, or any data. Enables semantic search (find similar, not just exact), RAG pipelines, and recommendation systems. <strong>Tools:</strong> Pinecone, Weaviate, Qdrant, pgvector, Chroma.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Use when: building LLM applications, semantic search, or any AI feature that needs to find "similar" data.</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--amber)">Model Registry</div>
+      <p style="font-size:.82rem;">Tracks trained models, experiments, hyperparameters, and performance metrics. Version control for ML models. Enables rollback, A/B testing, and audit trails. <strong>Tools:</strong> MLflow, Weights & Biases, SageMaker Model Registry.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Use when: you have more than one ML model in production or need to track experiments systematically.</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--green)">RAG Pipeline</div>
+      <p style="font-size:.82rem;">Retrieval-Augmented Generation — connect your private data to LLMs. Documents → chunk → embed → vector store → at query time, retrieve relevant chunks → pass to LLM with context. <strong>Tools:</strong> LangChain, LlamaIndex, custom pipelines.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Use when: building internal chatbots, document Q&A, or any LLM app that needs your company's private data.</p>
+    </div>
+  </div>
+
+  <h3>// Unstructured data → structured insight pipeline</h3>
+  <p>One of the most common new data engineering problems: you have PDFs, emails, call recordings, or images that contain valuable information but aren't structured. The AI layer solves this.</p>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Data type</th><th>Ingestion</th><th>AI processing</th><th>Output stored in</th><th>Use case</th></tr></thead>
+    <tbody>
+      <tr><td>PDFs / contracts</td><td>S3 / object store</td><td>LLM extraction (GPT-4, Claude) or docparser</td><td>Structured table in DW</td><td>Extract key dates, amounts, parties from contracts</td></tr>
+      <tr><td>Call recordings</td><td>S3 audio files</td><td>Whisper (transcription) → LLM (summarise, classify)</td><td>Text table + sentiment scores in DW</td><td>Customer sentiment, compliance monitoring</td></tr>
+      <tr><td>Product images</td><td>S3 images</td><td>CV model (classify, detect defects)</td><td>Metadata + labels in DW</td><td>Quality control, auto-tagging</td></tr>
+      <tr><td>Customer emails</td><td>Email API → S3</td><td>LLM (intent classification, entity extraction)</td><td>Structured labels in DW</td><td>Support ticket routing, churn signals</td></tr>
+      <tr><td>Web pages / documents</td><td>Scraper → S3</td><td>Embed → vector store</td><td>Vector store (Pinecone/Weaviate)</td><td>Semantic search, RAG chatbot</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout amber">⚡ <strong>The AI layer is now a first-class architectural concern.</strong> If your data strategy doesn't account for embeddings, feature stores, or LLM pipelines, it will need to within 12-18 months. Design your storage and transform layers to support it now — keep raw data in the lake, use open formats (Parquet/Iceberg), and don't lock yourself into a single vendor.</div>
 </section>
 
 <!-- ─── 7. PRINCIPLES ─── -->
@@ -677,6 +942,333 @@ footer a{color:var(--blue);text-decoration:none;}
   </table></div>
 </section>
 
+<!-- ─── ORCHESTRATION ─── -->
+<section id="orchestration">
+  <div class="sec-label">Section 12 — New</div>
+  <h2>Orchestration <span>Deep Dive</span></h2>
+  <p>Orchestration is the layer that <strong>manages task dependencies, scheduling, retries, and alerts</strong> across your entire pipeline. Without it, you're running cron jobs and praying.</p>
+
+  <div class="callout">💡 A pipeline moves data. An orchestrator makes sure the pipeline runs in the right order, at the right time, with the right dependencies — and tells you when it doesn't.</div>
+
+  <h3>// Key concepts</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Concept</th><th>What it means</th><th>Example</th></tr></thead>
+    <tbody>
+      <tr><td><strong>DAG</strong></td><td>Directed Acyclic Graph — tasks with dependencies, no cycles allowed</td><td>Task A must finish before Task B starts. Task B and C run in parallel. Task D waits for both B and C.</td></tr>
+      <tr><td><strong>Task</strong></td><td>A single unit of work in the DAG</td><td>Run a dbt model, execute a SQL query, trigger a Spark job, call an API</td></tr>
+      <tr><td><strong>Sensor</strong></td><td>Wait for a condition before proceeding</td><td>Wait for S3 file to exist. Wait for upstream table to be updated. Wait for API to respond.</td></tr>
+      <tr><td><strong>Retry</strong></td><td>Re-run a failed task automatically</td><td>Retry 3 times with exponential backoff (1 min, 2 min, 4 min). Alert after all retries exhausted.</td></tr>
+      <tr><td><strong>SLA</strong></td><td>Alert if task hasn't completed by a deadline</td><td>Pipeline must finish by 7am. If not, send Slack alert at 7:05am before analysts start work at 8am.</td></tr>
+      <tr><td><strong>Backfill</strong></td><td>Re-run pipeline for historical dates</td><td>Bug was in production for 2 weeks — re-run all daily runs from Jan 1 to Jan 14 to fix the data.</td></tr>
+      <tr><td><strong>Idempotency</strong></td><td>Running the same task twice gives the same result</td><td>Required for safe retries and backfills. DELETE + INSERT pattern instead of just INSERT.</td></tr>
+      <tr><td><strong>XCom</strong></td><td>Pass values between tasks in a DAG</td><td>Task A extracts a record count → passes it to Task B which alerts if count is below threshold.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>// Orchestration tools — compared</h3>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('orch','airflow',this)">Airflow</button>
+    <button class="tab-btn" onclick="tab('orch','dagster',this)">Dagster</button>
+    <button class="tab-btn" onclick="tab('orch','prefect',this)">Prefect</button>
+    <button class="tab-btn" onclick="tab('orch','temporal',this)">Temporal</button>
+  </div>
+
+  <div id="orch-airflow" class="tab-pane active">
+    <div class="grid2">
+      <div class="card hl">
+        <div class="card-title">Apache Airflow</div>
+        <p style="font-size:.82rem;">The industry standard. DAGs defined in Python. Huge ecosystem of operators (Spark, dbt, BigQuery, S3, Slack...). Battle-tested at thousands of companies. Managed options: MWAA (AWS), Cloud Composer (GCP), Astronomer.</p>
+        <span class="tag good">Industry standard</span><span class="tag good">Huge ecosystem</span><span class="tag bad">Complex setup</span><span class="tag bad">Python-only DAGs</span>
+      </div>
+      <div class="card">
+        <div class="card-title">When to use Airflow</div>
+        <p style="font-size:.82rem;">Your company already uses it. You need the broadest ecosystem support. You're comfortable with Python-defined DAGs. Team has Airflow experience. Large number of complex, interdependent pipelines.</p>
+        <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">⚠ Airflow was designed for task orchestration, not data-aware orchestration. It doesn't understand data assets, only task success/failure.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="orch-dagster" class="tab-pane">
+    <div class="grid2">
+      <div class="card hl">
+        <div class="card-title">Dagster</div>
+        <p style="font-size:.82rem;">Asset-oriented orchestration. You define <em>data assets</em> (tables, files, ML models), not just tasks. Dagster knows what data was produced, when, and by what. Built-in data lineage, observability, and software-defined assets.</p>
+        <span class="tag good">Asset-aware</span><span class="tag good">Best observability</span><span class="tag good">Modern design</span><span class="tag bad">Smaller ecosystem</span>
+      </div>
+      <div class="card">
+        <div class="card-title">When to use Dagster</div>
+        <p style="font-size:.82rem;">Greenfield projects. Teams that care about data lineage and asset tracking. dbt + Dagster is a very powerful combo. When you want orchestration that understands what data was produced, not just whether a task ran.</p>
+        <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Dagster Cloud is managed. Dagster Open Source is self-hosted.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="orch-prefect" class="tab-pane">
+    <div class="grid2">
+      <div class="card hl">
+        <div class="card-title">Prefect</div>
+        <p style="font-size:.82rem;">Python-first. Your Python functions become tasks and flows with minimal decoration. Easiest to get started with. Strong dynamic workflows — generate tasks at runtime based on data. Prefect Cloud is managed.</p>
+        <span class="tag good">Easiest to start</span><span class="tag good">Dynamic workflows</span><span class="tag good">Python-native</span><span class="tag bad">Less mature than Airflow</span>
+      </div>
+      <div class="card">
+        <div class="card-title">When to use Prefect</div>
+        <p style="font-size:.82rem;">Small to medium teams that want to move fast. Workflows that are highly dynamic (number of tasks changes based on data). Teams that want managed infrastructure without Airflow's operational overhead.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="orch-temporal" class="tab-pane">
+    <div class="grid2">
+      <div class="card hl">
+        <div class="card-title">Temporal</div>
+        <p style="font-size:.82rem;">Durable execution platform — not just for data pipelines. Workflows that can run for days or months, survive server restarts, and handle complex retry logic. More general than Airflow — used for both data and application workflows.</p>
+        <span class="tag good">Durable execution</span><span class="tag good">Any language</span><span class="tag bad">Not data-specific</span><span class="tag bad">Steeper learning curve</span>
+      </div>
+      <div class="card">
+        <div class="card-title">When to use Temporal</div>
+        <p style="font-size:.82rem;">Long-running workflows (hours/days). When you need workflow state to survive infrastructure failures. When you need orchestration across both data pipelines AND application logic. Used by Stripe, Netflix, Airbnb.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── GOVERNANCE ─── -->
+<section id="governance">
+  <div class="sec-label">Section 13 — New</div>
+  <h2>Data Governance <span>& Catalog</span></h2>
+  <p>At scale, nobody knows what tables exist, who owns them, where they came from, or whether they can be trusted. Governance is the system that answers those questions.</p>
+
+  <h3>// The 3 pillars</h3>
+  <div class="grid3">
+    <div class="card">
+      <div class="card-title" style="color:var(--blue)">Data Catalog</div>
+      <p style="font-size:.82rem;"><strong>What data exists?</strong> A searchable inventory of all datasets, tables, columns, and their descriptions. Analysts can find data without asking engineers. Think of it as Google for your internal data.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Tools: DataHub, Amundsen, Apache Atlas, Google Dataplex, Alation</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--purple)">Data Lineage</div>
+      <p style="font-size:.82rem;"><strong>Where did this data come from?</strong> Track the full journey: source DB → Bronze → dbt model → Gold table → dashboard. When a source changes, you instantly know what downstream tables and reports are affected.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Tools: dbt (built-in), DataHub, OpenLineage, Marquez</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--green)">Data Quality</div>
+      <p style="font-size:.82rem;"><strong>Can I trust this data?</strong> Automated checks that run after every pipeline run — null rates, duplicate rates, value range checks, referential integrity. Catch data quality issues before analysts do.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Tools: dbt tests, Great Expectations, Soda, Monte Carlo</p>
+    </div>
+  </div>
+
+  <h3>// Data quality frameworks — compared</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Tool</th><th>Type</th><th>How it works</th><th>Best for</th></tr></thead>
+    <tbody>
+      <tr><td><strong>dbt tests</strong></td><td>SQL-based tests in dbt</td><td>not_null, unique, accepted_values, relationships — run after every dbt build</td><td>Teams already using dbt. Covers 80% of quality needs with zero extra setup.</td></tr>
+      <tr><td><strong>Great Expectations</strong></td><td>Python-based expectation framework</td><td>Define expectations (expect_column_to_be_between), validate datasets, generate docs</td><td>Complex, custom validations. Non-dbt pipelines. Spark + Pandas data.</td></tr>
+      <tr><td><strong>Soda</strong></td><td>YAML-defined checks</td><td>Write checks in YAML, run against warehouse, alert on failure</td><td>Simple, readable checks. Good UI. Works with most warehouses.</td></tr>
+      <tr><td><strong>Monte Carlo</strong></td><td>ML-based anomaly detection</td><td>Learns your data's normal patterns. Alerts on anomalies automatically without writing rules.</td><td>Large orgs with too many tables to manually write checks for. Automated monitoring.</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout green">✓ <strong>Start with dbt tests.</strong> If you're using dbt, add not_null and unique tests to every model from day one. This costs nothing and catches the most common issues. Only add Great Expectations or Monte Carlo when dbt tests aren't sufficient.</div>
+</section>
+
+<!-- ─── SECURITY ─── -->
+<section id="security">
+  <div class="sec-label">Section 14 — New</div>
+  <h2>Security & <span>Access Control</span></h2>
+  <p>Data security is an architectural concern — not something you bolt on later. The decisions you make about how data flows through your layers determine what's possible to secure.</p>
+
+  <h3>// Core access control patterns</h3>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Row-Level Security (RLS)</div>
+      <p style="font-size:.82rem;">Users only see rows they're allowed to see. A sales rep sees only their own customers. A regional manager sees their region. Implemented at the warehouse or BI layer — same table, different views per user.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Supported in: Snowflake, BigQuery, Redshift, dbt + BI tools</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Column Masking / Encryption</div>
+      <p style="font-size:.82rem;">PII columns (email, SSN, phone) are masked for users without the right role. Analysts see <code>john.d***@gmail.com</code>. Data engineers see the real value. Masking is applied dynamically at query time.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Supported in: Snowflake Dynamic Data Masking, BigQuery column-level security</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Role-Based Access Control (RBAC)</div>
+      <p style="font-size:.82rem;">Grant permissions to roles, not individual users. Analysts role gets SELECT on Gold layer only. Engineers role gets write access to Bronze and Silver. Admins get everything. Users inherit permissions from their role.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Tokenisation</div>
+      <p style="font-size:.82rem;">Replace sensitive values with non-reversible tokens before storing. The original credit card number never enters your data warehouse — only a token that can be looked up in a secure vault if needed.</p>
+    </div>
+  </div>
+
+  <h3>// PII handling at architecture level</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Approach</th><th>How</th><th>When to use</th><th>Trade-off</th></tr></thead>
+    <tbody>
+      <tr><td>Mask before Bronze</td><td>Strip/hash PII during ingestion before it enters the lake</td><td>Strictest compliance. Data never enters platform raw.</td><td>Loses original value forever — can't unmask later</td></tr>
+      <tr><td>Store raw, mask on read</td><td>Store PII in Bronze, apply dynamic masking at query time</td><td>Need raw for reprocessing but control access strictly</td><td>PII is stored — must secure the Bronze layer tightly</td></tr>
+      <tr><td>Tokenise at source</td><td>Replace PII with tokens before pipeline begins</td><td>Payments, healthcare — highest sensitivity</td><td>Lookup vault adds latency and complexity</td></tr>
+      <tr><td>Separate PII vault</td><td>Store PII in isolated, encrypted DB — reference by ID only in main platform</td><td>GDPR right to erasure — delete from vault, ID becomes orphaned</td><td>Joins across systems required for full data</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout warn">⚠ <strong>GDPR right to erasure.</strong> If a user requests deletion of their data, you must be able to delete it everywhere — including your Bronze layer, backups, and any derived tables. Design your Bronze layer with GDPR in mind: store user_id references, not copies of PII spread across every table.</div>
+</section>
+
+<!-- ─── COST OPTIMIZATION ─── -->
+<section id="cost">
+  <div class="sec-label">Section 15 — New</div>
+  <h2>Cost <span>Optimization</span></h2>
+  <p>Cloud data platforms can get expensive fast. Most cost problems come from a handful of anti-patterns that are easy to fix once you know them.</p>
+
+  <h3>// Storage optimization</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Technique</th><th>What it does</th><th>Saving</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Partitioning</strong></td><td>Split tables by date/region so queries only scan relevant partitions. A query for Jan data scans only Jan partition, not the full table.</td><td>50-95% scan reduction for time-filtered queries</td></tr>
+      <tr><td><strong>Clustering / Z-ordering</strong></td><td>Co-locate rows with similar values on disk. BigQuery clustering, Snowflake clustering keys, Delta Lake Z-ORDER.</td><td>20-80% scan reduction for filtered queries</td></tr>
+      <tr><td><strong>Columnar formats</strong></td><td>Store data in Parquet or ORC instead of CSV/JSON. Columnar reads only the columns needed — not the whole row.</td><td>5-10x smaller storage, faster reads</td></tr>
+      <tr><td><strong>Storage tiers</strong></td><td>Move old data to cheaper storage. S3 Glacier for data >1 year. Snowflake time travel retention tuning.</td><td>70-90% cost reduction for cold data</td></tr>
+      <tr><td><strong>Compression</strong></td><td>ZSTD or Snappy compression on Parquet files. Warehouses do this automatically — but verify it's on.</td><td>3-5x storage reduction</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>// Compute anti-patterns — most expensive mistakes</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>#</th><th>Anti-pattern</th><th>Why it's expensive</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>SELECT *</code> on large tables</td><td>Scans all columns even if you need 3. In columnar DBs, costs scale with columns scanned.</td><td>Always select only needed columns</td></tr>
+      <tr><td>2</td><td>Full table scans without partition filter</td><td>Scans 3 years of data to get last 7 days</td><td>Always filter on partition column in WHERE clause</td></tr>
+      <tr><td>3</td><td>Cartesian joins (missing JOIN condition)</td><td>1M rows × 1M rows = 1 trillion row result. Cluster dies, bill explodes.</td><td>Always verify JOIN keys. Use EXPLAIN to check join type.</td></tr>
+      <tr><td>4</td><td>Idle warehouses / clusters</td><td>Snowflake warehouse running at full size 24/7 with no queries</td><td>Auto-suspend after 1-5 min inactivity. Auto-scale down.</td></tr>
+      <tr><td>5</td><td>Wrong warehouse size for workload</td><td>XL warehouse for a query that runs fine on S</td><td>Start small. Scale up only when proven necessary.</td></tr>
+      <tr><td>6</td><td>Materialising everything</td><td>dbt model materialised as table rebuilds fully every run — expensive for large models</td><td>Use incremental materialisation for large models</td></tr>
+      <tr><td>7</td><td>Redundant data copies</td><td>Same data in lake + warehouse + 3 different schemas "just in case"</td><td>Single source of truth per layer. Delete unused tables.</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout green">✓ <strong>The biggest cost wins, in order:</strong> (1) partition your largest tables, (2) auto-suspend idle warehouses, (3) delete unused tables and schemas, (4) switch SELECT * to SELECT specific columns. These four changes typically cut warehouse costs by 40-60% in most orgs.</div>
+</section>
+
+<!-- ─── TOOLS REFERENCE ─── -->
+<section id="tools">
+  <div class="sec-label">Section 16 — New</div>
+  <h2>Tools <span>Reference</span></h2>
+  <p>Every layer of the architecture has a set of tools. This section gives you a quick reference for each category — what they do, when to use them, and how they compare.</p>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('tools','ingestion',this)">Ingestion</button>
+    <button class="tab-btn" onclick="tab('tools','orchestration',this)">Orchestration</button>
+    <button class="tab-btn" onclick="tab('tools','transform',this)">Transform</button>
+    <button class="tab-btn" onclick="tab('tools','storage',this)">Storage</button>
+    <button class="tab-btn" onclick="tab('tools','quality',this)">Quality</button>
+    <button class="tab-btn" onclick="tab('tools','governance',this)">Governance</button>
+    <button class="tab-btn" onclick="tab('tools','ai',this)">AI / ML</button>
+  </div>
+
+  <div id="tools-ingestion" class="tab-pane active">
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Tool</th><th>Type</th><th>Best for</th><th>Managed?</th><th>Cost model</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Fivetran</strong></td><td>Managed EL (300+ connectors)</td><td>SaaS sources (Salesforce, HubSpot, Stripe). Zero maintenance. Just works.</td><td>Fully managed</td><td>Per row synced — can get expensive at scale</td></tr>
+        <tr><td><strong>Airbyte</strong></td><td>Open-source EL (350+ connectors)</td><td>Same as Fivetran but self-hosted. Lower cost at scale. Custom connectors.</td><td>Self-hosted or Airbyte Cloud</td><td>Free OSS. Cloud = compute cost.</td></tr>
+        <tr><td><strong>Debezium</strong></td><td>CDC connector (open source)</td><td>Log-based CDC from Postgres, MySQL, MongoDB. Real-time change capture including deletes.</td><td>Self-hosted</td><td>Free (infra cost only)</td></tr>
+        <tr><td><strong>Kafka Connect</strong></td><td>Streaming connector framework</td><td>Move data into/out of Kafka at scale. 200+ connectors. Database, S3, Elastic, etc.</td><td>Self-hosted or Confluent Cloud</td><td>Free OSS. Confluent = subscription.</td></tr>
+        <tr><td><strong>AWS DMS</strong></td><td>Managed DB migration + CDC</td><td>Migrate databases to AWS, ongoing replication, CDC to Redshift/S3.</td><td>Fully managed (AWS)</td><td>Per instance hour</td></tr>
+        <tr><td><strong>Stitch</strong></td><td>Managed EL (SaaS)</td><td>Simpler/cheaper alternative to Fivetran. Good for startups. Fewer connectors.</td><td>Fully managed</td><td>Per row synced</td></tr>
+        <tr><td><strong>Census / Hightouch</strong></td><td>Reverse ETL</td><td>Send data FROM your warehouse BACK to Salesforce, HubSpot, Slack, etc. Opposite direction.</td><td>Fully managed</td><td>Per destination sync</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div id="tools-orchestration" class="tab-pane">
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Tool</th><th>Model</th><th>Best for</th><th>Managed option</th><th>Learning curve</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Apache Airflow</strong></td><td>DAG-based, task-oriented</td><td>Industry standard. Broadest ecosystem. Complex interdependent pipelines.</td><td>MWAA (AWS), Cloud Composer (GCP), Astronomer</td><td>High</td></tr>
+        <tr><td><strong>Dagster</strong></td><td>Asset-oriented</td><td>Data-aware orchestration. Software-defined assets. Best lineage + observability.</td><td>Dagster Cloud</td><td>Medium</td></tr>
+        <tr><td><strong>Prefect</strong></td><td>Flow-based, Python-native</td><td>Fast to get started. Dynamic workflows. Small-medium teams.</td><td>Prefect Cloud</td><td>Low</td></tr>
+        <tr><td><strong>Temporal</strong></td><td>Durable execution</td><td>Long-running workflows, high reliability requirements, multi-language teams.</td><td>Temporal Cloud</td><td>High</td></tr>
+        <tr><td><strong>AWS Step Functions</strong></td><td>State machine (serverless)</td><td>AWS-native pipelines. No infra to manage. Good for event-driven workflows.</td><td>Fully managed</td><td>Medium</td></tr>
+        <tr><td><strong>dbt Cloud Jobs</strong></td><td>dbt-specific scheduling</td><td>If your pipeline IS dbt, dbt Cloud's job scheduler may be all you need.</td><td>Fully managed</td><td>Low</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div id="tools-transform" class="tab-pane">
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Tool</th><th>Language</th><th>Scale</th><th>Latency</th><th>Best for</th></tr></thead>
+      <tbody>
+        <tr><td><strong>dbt</strong></td><td>SQL + Jinja</td><td>Warehouse-scale</td><td>Batch (minutes)</td><td>Analytics transforms. Bronze→Gold. Version control, testing, docs. Use this first.</td></tr>
+        <tr><td><strong>Apache Spark</strong></td><td>Python/Scala/SQL</td><td>Petabyte</td><td>Minutes</td><td>When data is too large for the warehouse. ML feature prep. Complex transformations on raw files.</td></tr>
+        <tr><td><strong>Apache Flink</strong></td><td>Java/Python/SQL</td><td>Very high</td><td>Milliseconds</td><td>Real-time streaming transforms. Complex event processing. Stateful stream aggregations.</td></tr>
+        <tr><td><strong>Trino / Presto</strong></td><td>SQL</td><td>Large</td><td>Seconds</td><td>Federated queries across lake + warehouse + operational DBs. Exploration without ETL.</td></tr>
+        <tr><td><strong>Databricks</strong></td><td>Python/SQL/Scala</td><td>Petabyte</td><td>Batch + Stream</td><td>Unified Spark + Delta Lake + ML. Higher cost but reduces ops burden significantly.</td></tr>
+        <tr><td><strong>DuckDB</strong></td><td>SQL</td><td>Single machine</td><td>Seconds</td><td>Analytical queries on local files. Incredible for development, testing, small-scale analytics.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div id="tools-storage" class="tab-pane">
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Tool</th><th>Type</th><th>Best for</th><th>Key strength</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Snowflake</strong></td><td>Cloud Data Warehouse</td><td>SQL analytics at any scale. Separates storage from compute. Multi-cloud.</td><td>Easiest to operate. Best SQL performance. Auto-scaling.</td></tr>
+        <tr><td><strong>BigQuery</strong></td><td>Serverless Cloud DW (GCP)</td><td>No infrastructure. Pay per query. Scales to petabytes automatically.</td><td>Serverless — zero ops. Built-in ML (BQML). Native Iceberg support.</td></tr>
+        <tr><td><strong>Redshift</strong></td><td>Cloud DW (AWS)</td><td>Best when already deep in AWS ecosystem. Redshift Spectrum queries S3 directly.</td><td>Deep AWS integration. Zero ETL from Aurora/DynamoDB.</td></tr>
+        <tr><td><strong>Databricks (Delta Lake)</strong></td><td>Lakehouse platform</td><td>Unified analytics + ML on open table format. Spark-native.</td><td>Best for ML + analytics in one platform. Open format (Delta/Iceberg).</td></tr>
+        <tr><td><strong>Apache Iceberg</strong></td><td>Open table format</td><td>Lakehouse on any object store. Works with Spark, Flink, Trino, BigQuery, Snowflake.</td><td>Vendor neutral. Growing industry standard. Time travel, schema evolution.</td></tr>
+        <tr><td><strong>DuckDB</strong></td><td>In-process analytical DB</td><td>Local analytics on Parquet/CSV. No server. Embedded in Python.</td><td>Fastest single-machine analytics. Perfect for development and small datasets.</td></tr>
+        <tr><td><strong>InfluxDB</strong></td><td>Time Series DB</td><td>IoT sensor data, metrics, monitoring. Optimised for time-range queries.</td><td>Best-in-class for time series. Automatic downsampling and retention policies.</td></tr>
+        <tr><td><strong>Pinecone</strong></td><td>Managed Vector Store</td><td>Embeddings for semantic search and RAG. Fully managed.</td><td>Easiest managed vector store. Fast similarity search at scale.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div id="tools-quality" class="tab-pane">
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Tool</th><th>Approach</th><th>Best for</th><th>When to add it</th></tr></thead>
+      <tbody>
+        <tr><td><strong>dbt tests</strong></td><td>SQL-based tests in dbt (not_null, unique, accepted_values, relationships)</td><td>Teams using dbt. Covers 80% of quality needs. Zero extra tooling.</td><td>Day 1. Add to every dbt model from the start.</td></tr>
+        <tr><td><strong>Great Expectations</strong></td><td>Python expectation framework. Define and validate data expectations.</td><td>Complex validations. Non-dbt pipelines. Spark and Pandas data.</td><td>When dbt tests aren't enough. Complex statistical checks.</td></tr>
+        <tr><td><strong>Soda</strong></td><td>YAML-defined checks. Runs against warehouse. Clean UI.</td><td>Simple readable checks for non-engineers. Good dashboards.</td><td>When you want non-engineers to write and own quality checks.</td></tr>
+        <tr><td><strong>Monte Carlo</strong></td><td>ML-based anomaly detection. No rules to write — learns normal patterns.</td><td>Large orgs with too many tables to manually monitor. Automated alerting.</td><td>When you have 100+ tables and can't write manual checks for all of them.</td></tr>
+        <tr><td><strong>Anomalo</strong></td><td>AI-powered data quality. Automatic issue detection + root cause analysis.</td><td>Enterprise data quality at scale with minimal configuration.</td><td>Enterprise scale with budget for managed tooling.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div id="tools-governance" class="tab-pane">
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Tool</th><th>Type</th><th>Best for</th><th>Deployment</th></tr></thead>
+      <tbody>
+        <tr><td><strong>DataHub</strong></td><td>Open-source data catalog + lineage</td><td>Most feature-complete OSS option. Metadata, lineage, ownership, tags. LinkedIn-originated.</td><td>Self-hosted (Kubernetes) or Acryl Cloud</td></tr>
+        <tr><td><strong>Amundsen</strong></td><td>Open-source data discovery</td><td>Search-first catalog. Find tables fast. Lyft-originated. Simpler than DataHub.</td><td>Self-hosted</td></tr>
+        <tr><td><strong>Apache Atlas</strong></td><td>Open-source governance + lineage</td><td>Hadoop/Hive heavy stacks. Strong lineage for traditional data platforms.</td><td>Self-hosted</td></tr>
+        <tr><td><strong>Google Dataplex</strong></td><td>Managed governance (GCP)</td><td>GCP-native data catalog, quality, lineage. Integrates with BigQuery and GCS natively.</td><td>Fully managed (GCP)</td></tr>
+        <tr><td><strong>AWS Lake Formation</strong></td><td>Managed governance (AWS)</td><td>Fine-grained access control on S3 + Glue Catalog. Row/column level security for lake.</td><td>Fully managed (AWS)</td></tr>
+        <tr><td><strong>Microsoft Purview</strong></td><td>Managed governance (Azure)</td><td>Azure-native. Scans Azure, AWS, GCP, and on-prem sources. Good for hybrid estates.</td><td>Fully managed (Azure)</td></tr>
+        <tr><td><strong>Alation</strong></td><td>Enterprise data catalog (commercial)</td><td>Best enterprise catalog UX. Strong search, curation, stewardship workflows.</td><td>Managed SaaS or self-hosted</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div id="tools-ai" class="tab-pane">
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Tool</th><th>Type</th><th>Best for</th><th>Managed?</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Feast</strong></td><td>Open-source Feature Store</td><td>Serve ML features consistently at training and inference time. Lightweight and flexible.</td><td>Self-hosted</td></tr>
+        <tr><td><strong>Tecton</strong></td><td>Managed Feature Platform</td><td>Enterprise feature store. Real-time + batch features. Strong data engineering integrations.</td><td>Fully managed</td></tr>
+        <tr><td><strong>Pinecone</strong></td><td>Managed Vector Store</td><td>Production RAG and semantic search. Easiest to get started with.</td><td>Fully managed</td></tr>
+        <tr><td><strong>Weaviate</strong></td><td>Open-source Vector Store</td><td>Self-hosted vector store with built-in vectorisation modules. Multi-modal.</td><td>Self-hosted or Weaviate Cloud</td></tr>
+        <tr><td><strong>pgvector</strong></td><td>Postgres extension for vectors</td><td>Store embeddings in Postgres. No new infrastructure. Great for small-medium scale.</td><td>Self-hosted (in existing Postgres)</td></tr>
+        <tr><td><strong>MLflow</strong></td><td>Open-source ML lifecycle</td><td>Track experiments, model versions, metrics. Standard for ML team workflow.</td><td>Self-hosted or Databricks managed</td></tr>
+        <tr><td><strong>LangChain / LlamaIndex</strong></td><td>LLM application frameworks</td><td>Build RAG pipelines, agents, document Q&A on top of any LLM + vector store.</td><td>Open-source libraries</td></tr>
+        <tr><td><strong>Vertex AI (GCP)</strong></td><td>Managed ML platform</td><td>End-to-end ML on GCP. Feature store, training, serving, monitoring all in one.</td><td>Fully managed (GCP)</td></tr>
+        <tr><td><strong>SageMaker (AWS)</strong></td><td>Managed ML platform</td><td>End-to-end ML on AWS. Feature store, training, endpoints, monitoring.</td><td>Fully managed (AWS)</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
 <footer>
   Data Engineering Guide · <a href="scd.html">← SCD</a> · <a href="data-modelling.html">← Data Modelling</a>
 </footer>
@@ -732,11 +1324,38 @@ function smallBox(svg,x,y,w,h,color,label,icon){
 // ── CORE PIPELINE ──
 function buildCore(){
   const svg=clearSVG('svg-core');
-  const steps=[{l:'Source',c:C.blue},{l:'Extract',c:C.purple},{l:'Transform',c:C.amber},{l:'Load',c:C.bronze},{l:'Serve',c:C.green}];
-  const BW=100,BH=50,GAP=24,Y=14;
+  const steps=[
+    {l:'Source',s:'App DBs · APIs · Files · Events',c:C.blue},
+    {l:'Ingestion',s:'Batch · CDC · Streaming',c:C.purple},
+    {l:'Storage',s:'Lake · DW · Lakehouse',c:C.bronze},
+    {l:'Transform',s:'dbt · Spark · Flink',c:C.amber},
+    {l:'Serving',s:'DW · APIs · Feature Store',c:C.silver},
+    {l:'Consume',s:'BI · ML · Apps',c:C.green}
+  ];
+  const BW=103,BH=62,GAP=10,Y=12;
   steps.forEach((s,i)=>{
-    const x=i*(BW+GAP)+10;
-    box(svg,x,Y,BW,BH,s.c,s.l,'','');
+    const x=i*(BW+GAP)+5;
+    box(svg,x,Y,BW,BH,s.c,s.l,s.s,s.l+': '+s.s);
+    if(i<steps.length-1) arrow(svg,x+BW+2,Y+BH/2,x+BW+GAP-2,Y+BH/2);
+  });
+}
+
+// ── AI LAYER DIAGRAM ──
+function buildAILayer(){
+  const svg=clearSVG('svg-ailayer');
+  if(!svg)return;
+  const steps=[
+    {l:'Storage',s:'Gold / Lake',c:C.bronze},
+    {l:'Feature Store',s:'Feast · Tecton',c:C.purple},
+    {l:'Vector Store',s:'Pinecone · pgvector',c:C.blue},
+    {l:'Model Registry',s:'MLflow · W&B',c:C.amber},
+    {l:'Inference',s:'SageMaker · Vertex',c:C.green},
+    {l:'Consume',s:'Apps · RAG · APIs',c:C.silver}
+  ];
+  const BW=100,BH=62,GAP=10,Y=12;
+  steps.forEach((s,i)=>{
+    const x=i*(BW+GAP)+5;
+    box(svg,x,Y,BW,BH,s.c,s.l,s.s,s.l+': '+s.s);
     if(i<steps.length-1) arrow(svg,x+BW+2,Y+BH/2,x+BW+GAP-2,Y+BH/2);
   });
 }
@@ -921,9 +1540,9 @@ function tab(group,id,btn){
 
 // ── BATCH DECISION TOOL ──
 const batchQs=[
-  {q:'How quickly do stakeholders need to see the data?',sub:'This determines the minimum latency requirement.',opts:[{l:'Next day is fine (daily reports)',key:'batch'},{l:'Within 15 minutes',key:'micro'},{l:'Under 1 minute (real-time)',key:'stream'}]},
-  {q:'How complex is your team\'s streaming expertise?',sub:'Streaming is 10x more complex to operate.',opts:[{l:'Small team — prefer simple tools',key:'batch'},{l:'Medium team — can handle some complexity',key:'micro'},{l:'Experienced team with streaming background',key:'stream'}]},
-  {q:'What is the business impact of processing failures?',sub:'Higher impact = more robust (complex) solution needed.',opts:[{l:'Low — analysts can wait for next run',key:'batch'},{l:'Medium — need recovery within 30 min',key:'micro'},{l:'High — fraud, payments, live inventory',key:'stream'}]}
+  {q:'How quickly do stakeholders ACTUALLY need to see the data?',sub:'Most "real-time" requirements are micro-batch in disguise. A dashboard that refreshes every 10 minutes does not need Kafka. Clarify whether the business needs data fresh, or just the UI to feel fast.',opts:[{l:'Next day is fine (daily reports, overnight DW loads)',key:'batch'},{l:'Within 5-15 minutes (near real-time dashboards)',key:'micro'},{l:'Under 1 minute — hard SLA, no exceptions',key:'stream'}]},
+  {q:'What is your team\'s streaming expertise?',sub:'Streaming is 10x more complex to operate than batch. It requires expertise in watermarks, out-of-order events, state management, and exactly-once semantics. A small team that picks Kafka without this background will spend 80% of their time on ops, not features.',opts:[{l:'Small team (1-3 engineers) — prefer simple, managed tools',key:'batch'},{l:'Medium team — comfortable with some operational complexity',key:'micro'},{l:'Dedicated streaming engineers with Kafka/Flink experience',key:'stream'}]},
+  {q:'What is the business impact when this pipeline fails?',sub:'Failure is guaranteed. The question is: how bad is it? If analysts wait an hour for a retry, that\'s low impact. If a fraud transaction goes undetected for 2 minutes because the pipeline was down, that\'s a direct financial loss — and justifies streaming complexity.',opts:[{l:'Low — analysts wait for the next scheduled run',key:'batch'},{l:'Medium — need recovery and backfill within 30 minutes',key:'micro'},{l:'High — fraud, payments, live inventory. Every second counts.',key:'stream'}]}
 ];
 const batchResults={
   batch:{title:'Batch Processing',why:'Daily latency is acceptable, team is simple. Use Airflow + dbt + Spark on a schedule. Cheapest, most maintainable option.'},
@@ -1005,7 +1624,7 @@ const navLinks=document.querySelectorAll('nav a[href^="#"]');
 window.addEventListener('scroll',()=>{let cur='';document.querySelectorAll('section[id]').forEach(s=>{if(window.scrollY>=s.offsetTop-80)cur=s.id;});navLinks.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+cur));});
 
 window.addEventListener('load',()=>{
-  buildCore();buildCDC();
+  buildCore();buildCDC();buildAILayer();
   drawMedallion('generic','svg-medallion');
   drawLambda('generic','svg-lambda');
   drawKappa('generic');
