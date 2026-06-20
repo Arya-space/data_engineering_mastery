@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Architecture Designer — DE Guide</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1f2937;--border:#30363d;
+  --blue:#58a6ff;--purple:#bc8cff;--amber:#e3b341;--green:#3fb950;
+  --warn:#f78166;--bronze:#cd7f32;--silver:#8b949e;
+  --text:#e6edf3;--muted:#8b949e;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:300;line-height:1.7;}
+nav{position:sticky;top:0;z-index:100;background:rgba(13,17,23,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1.5rem;height:52px;overflow-x:auto;gap:0;}
+nav a{color:var(--muted);text-decoration:none;font-size:.72rem;font-family:var(--mono);padding:0 .8rem;height:52px;display:flex;align-items:center;border-bottom:2px solid transparent;white-space:nowrap;transition:color .2s,border-color .2s;}
+nav a:hover,nav a.active{color:var(--blue);border-bottom-color:var(--blue);}
+.nav-brand{color:var(--text)!important;font-weight:600!important;border-right:1px solid var(--border);padding-right:1rem!important;margin-right:.3rem;}
+.hero{padding:5rem 2rem 4rem;max-width:960px;margin:0 auto;}
+.hero-tag{font-family:var(--mono);font-size:.68rem;color:var(--blue);letter-spacing:.14em;text-transform:uppercase;margin-bottom:1rem;}
+.hero h1{font-size:clamp(2rem,5vw,3.2rem);font-weight:600;line-height:1.15;letter-spacing:-.02em;margin-bottom:1rem;}
+.hero h1 span{color:var(--blue);}
+.hero p{color:var(--muted);max-width:580px;margin-bottom:1.5rem;}
+.pill-row{display:flex;gap:.5rem;flex-wrap:wrap;}
+.pill{font-family:var(--mono);font-size:.68rem;padding:.25rem .7rem;border-radius:2rem;border:1px solid var(--border);color:var(--muted);}
+.pill.blue{border-color:var(--blue);color:var(--blue);}
+.pill.green{border-color:var(--green);color:var(--green);}
+section{max-width:960px;margin:0 auto;padding:3rem 2rem;border-top:1px solid var(--border);}
+.sec-label{font-family:var(--mono);font-size:.65rem;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:.5rem;}
+h2{font-size:1.6rem;font-weight:600;margin-bottom:.8rem;letter-spacing:-.01em;}
+h2 span{color:var(--blue);}
+h3{font-size:.95rem;font-weight:600;margin:1.5rem 0 .5rem;color:var(--blue);font-family:var(--mono);}
+p{color:var(--muted);margin-bottom:.8rem;}
+strong{color:var(--text);font-weight:600;}
+code{font-family:var(--mono);font-size:.8rem;color:var(--blue);background:var(--surface);padding:.1rem .4rem;border-radius:3px;}
+.callout{background:var(--surface);border-left:3px solid var(--blue);border-radius:0 6px 6px 0;padding:.9rem 1.1rem;margin:1rem 0;font-size:.88rem;color:var(--text);}
+.callout.green{border-left-color:var(--green);}
+.callout.warn{border-left-color:var(--warn);}
+.callout.amber{border-left-color:var(--amber);}
+.callout.purple{border-left-color:var(--purple);}
+.tbl-wrap{overflow-x:auto;margin:1rem 0;}
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.78rem;}
+th{background:var(--surface2);color:var(--muted);padding:.45rem .8rem;border:1px solid var(--border);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;text-align:left;}
+td{padding:.4rem .8rem;border:1px solid var(--border);color:var(--text);}
+tr:nth-child(even) td{background:rgba(255,255,255,.02);}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0;}
+@media(max-width:600px){.grid2{grid-template-columns:1fr;}}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin:1rem 0;}
+@media(max-width:700px){.grid3{grid-template-columns:1fr;}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.1rem;}
+.card.hl{border-color:var(--blue);}
+.card-title{font-family:var(--mono);font-size:.82rem;font-weight:600;color:var(--blue);margin-bottom:.5rem;}
+.tag{font-family:var(--mono);font-size:.65rem;padding:.15rem .5rem;border-radius:3px;display:inline-block;margin:.15rem .1rem;}
+.tag.good{background:rgba(63,185,80,.12);color:var(--green);}
+.tag.bad{background:rgba(247,129,102,.12);color:var(--warn);}
+.tag.neutral{background:rgba(88,166,255,.1);color:var(--blue);}
+
+/* RULE CARDS */
+.rule{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.2rem;margin-bottom:1rem;}
+.rule-num{font-family:var(--mono);font-size:.65rem;color:var(--muted);margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.08em;}
+.rule-title{font-size:1rem;font-weight:600;color:var(--text);margin-bottom:.6rem;}
+.rule-body{font-size:.85rem;color:var(--muted);}
+.rule-row{margin:.4rem 0;display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;}
+.ri{font-family:var(--mono);font-size:.73rem;color:var(--blue);background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.2);border-radius:4px;padding:.25rem .55rem;}
+.ro{font-family:var(--mono);font-size:.73rem;color:var(--green);background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.2);border-radius:4px;padding:.25rem .55rem;}
+.rw{font-family:var(--mono);font-size:.73rem;color:var(--warn);background:rgba(247,129,102,.08);border:1px solid rgba(247,129,102,.2);border-radius:4px;padding:.25rem .55rem;}
+
+/* WIZARD */
+.wizard{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:1.5rem 0;}
+.wizard-header{background:var(--surface2);border-bottom:1px solid var(--border);padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;}
+.wizard-title{font-family:var(--mono);font-size:.8rem;color:var(--text);font-weight:600;}
+.wizard-progress{display:flex;gap:.4rem;align-items:center;}
+.wp-dot{width:9px;height:9px;border-radius:50%;background:var(--border);transition:background .3s;}
+.wp-dot.done{background:var(--green);}
+.wp-dot.active{background:var(--blue);}
+.wizard-body{padding:1.8rem;}
+.wiz-q{font-size:1.05rem;font-weight:600;color:var(--text);margin-bottom:.35rem;}
+.wiz-sub{font-size:.83rem;color:var(--muted);margin-bottom:1.3rem;}
+.wiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;}
+@media(max-width:520px){.wiz-opts{grid-template-columns:1fr;}}
+.wiz-opt{background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:.85rem 1.1rem;cursor:pointer;text-align:left;transition:all .2s;display:flex;flex-direction:column;gap:.25rem;}
+.wiz-opt:hover{border-color:var(--blue);background:rgba(88,166,255,.05);}
+.wiz-opt.sel{border-color:var(--blue);background:rgba(88,166,255,.1);}
+.wiz-opt-label{font-family:var(--mono);font-size:.84rem;font-weight:600;color:var(--text);}
+.wiz-opt-sub{font-size:.75rem;color:var(--muted);}
+.wiz-nav{display:flex;gap:.6rem;margin-top:1.4rem;align-items:center;}
+.wiz-btn{font-family:var(--mono);font-size:.76rem;padding:.48rem 1.2rem;border-radius:5px;border:none;cursor:pointer;font-weight:600;transition:all .2s;}
+.wiz-btn.primary{background:var(--blue);color:#0d1117;}
+.wiz-btn.primary:hover{background:#79b8ff;}
+.wiz-btn.secondary{background:var(--surface2);color:var(--muted);border:1px solid var(--border);}
+.wiz-btn.secondary:hover{color:var(--text);}
+.wiz-btn:disabled{opacity:.3;cursor:not-allowed;}
+.wiz-step-label{font-family:var(--mono);font-size:.7rem;color:var(--muted);margin-left:auto;}
+
+/* OUTPUT */
+.output-wrap{background:var(--surface);border:1px solid var(--green);border-radius:12px;overflow:hidden;margin:1.5rem 0;display:none;}
+.output-header{background:rgba(63,185,80,.07);border-bottom:1px solid rgba(63,185,80,.2);padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;}
+.output-title{font-family:var(--mono);font-size:.85rem;font-weight:600;color:var(--green);}
+.output-body{padding:1.5rem;}
+.stack-name{font-size:1.4rem;font-weight:600;color:var(--text);margin-bottom:.3rem;letter-spacing:-.01em;}
+.stack-desc{font-size:.83rem;color:var(--muted);margin-bottom:1.5rem;font-family:var(--mono);}
+.stack-layers{display:flex;flex-direction:column;gap:.5rem;margin-bottom:1.5rem;}
+.stack-layer{display:grid;grid-template-columns:130px 1fr;gap:1rem;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.75rem 1rem;align-items:start;}
+@media(max-width:520px){.stack-layer{grid-template-columns:1fr;}}
+.sl-label{font-family:var(--mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;padding-top:.15rem;}
+.sl-tool{font-family:var(--mono);font-size:.84rem;font-weight:600;margin-bottom:.2rem;}
+.sl-why{font-size:.78rem;color:var(--muted);}
+.why-not-wrap{margin-top:1.5rem;}
+.why-not-title{font-family:var(--mono);font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.8rem;}
+.why-not-item{background:rgba(247,129,102,.05);border:1px solid rgba(247,129,102,.15);border-radius:6px;padding:.65rem .95rem;margin-bottom:.45rem;font-size:.8rem;line-height:1.6;}
+.why-not-item strong{color:var(--warn);}
+.output-reset{font-family:var(--mono);font-size:.72rem;color:var(--muted);background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;padding:.3rem .7rem;transition:all .2s;}
+.output-reset:hover{color:var(--text);border-color:var(--muted);}
+
+/* DIAGRAM */
+.diagram-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:1.2rem 0;}
+.diagram-header{display:flex;align-items:center;justify-content:space-between;padding:.6rem 1rem;background:var(--surface2);border-bottom:1px solid var(--border);font-family:var(--mono);font-size:.7rem;color:var(--muted);}
+.diagram-scroll{overflow-x:auto;padding:.8rem;}
+svg.diag{overflow:visible;}
+.legend{display:flex;gap:1rem;flex-wrap:wrap;padding:.6rem 1rem;border-top:1px solid var(--border);}
+.leg-item{display:flex;align-items:center;gap:.4rem;font-family:var(--mono);font-size:.7rem;color:var(--muted);}
+.leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+
+#tip{position:fixed;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.5rem .8rem;font-family:var(--mono);font-size:.73rem;color:var(--text);pointer-events:none;display:none;z-index:999;max-width:260px;line-height:1.5;}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;font-family:var(--mono);font-size:.72rem;color:var(--muted);}
+footer a{color:var(--blue);text-decoration:none;}
+</style>
+</head>
+<body>
+<div id="tip"></div>
+
+<nav>
+  <a href="#" class="nav-brand">DE Guide</a>
+  <a href="data_architure.html">← Architecture</a>
+  <a href="#what">What is this</a>
+  <a href="#how">How to use</a>
+  <a href="#rules">Rules Engine</a>
+  <a href="#walkthrough">Walkthrough</a>
+  <a href="#designer">Designer</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-tag">Data Engineering · Architecture Designer</div>
+  <h1>Design Your<br><span>Data Architecture</span></h1>
+  <p>Answer 6 questions. Get a complete, named architecture — ingestion, storage, transform, serving, orchestration, and governance — with an interactive diagram and the reasoning behind every choice.</p>
+  <div class="pill-row">
+    <span class="pill blue">10 decision rules</span>
+    <span class="pill blue">Rules engine explained</span>
+    <span class="pill green">Named stack output</span>
+    <span class="pill green">SVG diagram</span>
+    <span class="pill green">Why-not explanations</span>
+  </div>
+</div>
+
+<!-- ─── WHAT IS ARCHITECTURE DESIGN ─── -->
+<section id="what">
+  <div class="sec-label">Section 01</div>
+  <h2>What is <span>Architecture Design?</span></h2>
+  <p>Data architecture design is the process of choosing <strong>how data flows through your system</strong> — which tools handle ingestion, where data is stored, how it's transformed, who serves it, and how it's governed. A bad architecture decision made early is expensive to undo.</p>
+
+  <div class="callout purple">💡 Architecture is not about picking the newest or most impressive tools. It is about picking the <strong>simplest combination that solves your actual problem</strong> at your actual scale, with your actual team. Complexity is a liability, not a feature.</div>
+
+  <h3>// Why this matters</h3>
+  <div class="grid3">
+    <div class="card">
+      <div class="card-title">Wrong architecture = technical debt</div>
+      <p style="font-size:.82rem;">A 3-person startup that builds a full Lambda architecture in year 1 will spend 80% of engineering time on ops instead of features. The complexity doesn't match the scale — and you can't hire your way out of it.</p>
+    </div>
+    <div class="card hl">
+      <div class="card-title">Right architecture = leverage</div>
+      <p style="font-size:.82rem;">The right choice compounds over time. Medallion + dbt + Snowflake chosen correctly in year 1 can scale to hundreds of models and dozens of engineers with minimal re-architecture. Simple beats clever.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Architecture is not permanent</div>
+      <p style="font-size:.82rem;">Every company evolves. Startups outgrow simple stacks. Enterprises decompose monoliths. Design for the next 18–24 months, not forever. Use open formats (Iceberg, Parquet) to avoid lock-in.</p>
+    </div>
+  </div>
+
+  <h3>// The 6 decisions you always have to make</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>#</th><th>Decision</th><th>What it affects</th><th>How hard to change later</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><strong>What type of data?</strong></td><td>Storage type, processing engine, entire stack shape</td><td style="color:var(--warn)">Very hard — replatforming costs months</td></tr>
+      <tr><td>2</td><td><strong>What latency do you need?</strong></td><td>Batch vs stream vs micro-batch, ingestion pattern</td><td style="color:var(--amber)">Medium — can evolve batch → stream incrementally</td></tr>
+      <tr><td>3</td><td><strong>What architecture pattern?</strong></td><td>How layers are organised, team structure, codebase complexity</td><td style="color:var(--warn)">Hard — Medallion→Mesh is an org change, not just tech</td></tr>
+      <tr><td>4</td><td><strong>Which cloud?</strong></td><td>Every tool choice, cost model, vendor lock-in exposure</td><td style="color:var(--warn)">Very hard — migration costs are enormous</td></tr>
+      <tr><td>5</td><td><strong>Managed vs self-hosted?</strong></td><td>Ops burden, cost at scale, customisation ability</td><td style="color:var(--green)">Easier — can migrate from managed to OSS later</td></tr>
+      <tr><td>6</td><td><strong>Do you need an AI layer?</strong></td><td>Storage format, vector store, feature store requirements</td><td style="color:var(--amber)">Medium — can add on if designed with open formats</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>// What the different architecture types actually mean</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Type</th><th>What it actually is</th><th>Common confusion</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Data Warehouse design</strong></td><td>Your storage + transform layer uses structured, schema-on-write data. Star schema, Kimball, facts and dimensions. Optimised for SQL analytics.</td><td>People think "DW design" means only Snowflake or BigQuery. It's a philosophy — schema-on-write, structured, BI-optimised.</td></tr>
+      <tr><td><strong>Data Lake design</strong></td><td>Raw files in object storage (S3/GCS). Any format, any structure. Schema-on-read. Cheap. Good for ML and exploration.</td><td>A lake without governance becomes a swamp. You need a catalog and quality layer on top.</td></tr>
+      <tr><td><strong>Data Pipeline design</strong></td><td>How data MOVES between layers — batch, streaming, CDC. The plumbing that connects source to destination.</td><td>The pipeline IS the architecture for many people. It's actually just one layer of it.</td></tr>
+      <tr><td><strong>Data Mesh design</strong></td><td>Who OWNS the layers — not a technology. Each domain team owns their data product end-to-end.</td><td>Mesh is an org model, not a tool. You can't buy Data Mesh. You have to reorganise your teams.</td></tr>
+      <tr><td><strong>Data Fabric design</strong></td><td>A metadata-driven technology layer that automatically connects, integrates, and governs data across all systems.</td><td>Fabric is a tech architecture. Mesh is an org model. They can coexist — Fabric can be the platform that enables Mesh.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ─── HOW TO USE ─── -->
+<section id="how">
+  <div class="sec-label">Section 02</div>
+  <h2>How to Use <span>This Tool</span></h2>
+  <p>The designer works in two phases: <strong>requirements gathering</strong> (6 questions) and <strong>stack generation</strong> (the rules engine produces your architecture). Here is exactly what each question does and why it's asked in this order.</p>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Step</th><th>Question</th><th>Why first</th><th>What it eliminates</th></tr></thead>
+    <tbody>
+      <tr><td><strong>1</strong></td><td>What kind of data?</td><td>Data type is the most fundamental constraint — it determines what storage systems are even physically possible</td><td>Time series → eliminates standard DW as primary. Media → eliminates DW entirely, needs object store.</td></tr>
+      <tr><td><strong>2</strong></td><td>What latency do you need?</td><td>Latency forces the ingestion pattern and processing mode before any tool choices are made</td><td>Daily batch → eliminates Kafka, Flink, Kappa architecture. Sub-second → eliminates batch-only stacks.</td></tr>
+      <tr><td><strong>3</strong></td><td>What architecture pattern?</td><td>Pattern defines the overall layer structure — everything else fills in the blanks</td><td>Mesh → requires 50+ engineers. Zero ETL → requires same-vendor source + destination.</td></tr>
+      <tr><td><strong>4</strong></td><td>Which cloud?</td><td>Cloud determines the specific product names for each layer from the tool lookup table</td><td>Azure → eliminates Redshift, BigQuery. OSS → eliminates managed-only products.</td></tr>
+      <tr><td><strong>5</strong></td><td>Team size?</td><td>Team size determines managed vs self-hosted preference and the operational complexity ceiling</td><td>1–3 engineers → eliminates self-hosted Kafka, Flink, Airflow, Spark clusters.</td></tr>
+      <tr><td><strong>6</strong></td><td>Need AI / ML?</td><td>Adds Feature Store and/or Vector Store layer if needed — skipped entirely if not required</td><td>No AI → skips the entire AI layer to keep the stack minimal and focused.</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout green">✓ <strong>Output format:</strong> The tool produces (1) a named stack with every layer filled in, (2) the reasoning behind each tool choice, (3) what you chose NOT to use and exactly why, and (4) an interactive SVG diagram you can read layer by layer with hover tooltips.</div>
+
+  <h3>// How to read the output</h3>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Stack layers</div>
+      <p style="font-size:.82rem;">Every layer is shown in order — source to consumption. Each entry shows the layer name, the specific tool for your cloud and team size, and the reason that tool was selected over alternatives.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Why-not section</div>
+      <p style="font-size:.82rem;">The most useful part for interviews and stakeholder discussions. Every major tool or pattern that was eliminated has an explicit explanation — not just "we didn't pick it" but "here's why it doesn't fit your specific situation."</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─── RULES ENGINE ─── -->
+<section id="rules">
+  <div class="sec-label">Section 03</div>
+  <h2>The <span>Rules Engine</span></h2>
+  <p>The designer is driven by 10 rules that run in sequence. Each rule takes your answers as input and either eliminates options, selects tools, or adds layers. Earlier rules have higher priority and can override later ones.</p>
+  <div class="callout amber">⚡ Rules 1, 2, and 3 are <strong>hard filters</strong> — they eliminate entire categories before any tool names are chosen. Rules 4–7 fill in specific tools. Rules 8–10 add compliance, scale, and the why-not library on top.</div>
+
+  <div class="rule">
+    <div class="rule-num">Rule 01 — Hard filter (highest priority)</div>
+    <div class="rule-title">Data type eliminates entire storage categories</div>
+    <div class="rule-body">
+      <p style="margin-bottom:.8rem;">Before anything else, the data type rules out entire classes of storage and processing tools. This cannot be overridden by any later rule.</p>
+      <div class="rule-row"><span class="ri">IF data_type = time_series</span><span class="ro">THEN storage = TimescaleDB / InfluxDB / QuestDB</span><span class="rw">ELIMINATE standard DW as primary</span></div>
+      <div class="rule-row"><span class="ri">IF data_type = media (images/video/audio)</span><span class="ro">THEN storage = object_store (S3/GCS/ADLS)</span><span class="rw">ELIMINATE DW — only for metadata output</span></div>
+      <div class="rule-row"><span class="ri">IF data_type = documents/PDFs</span><span class="ro">THEN storage = object_store + vector_store</span><span class="ro">THEN ai_layer = required</span></div>
+      <div class="rule-row"><span class="ri">IF data_type = structured OR semi_structured</span><span class="ro">THEN storage = DW or Lakehouse (standard path)</span></div>
+      <div class="rule-row"><span class="ri">IF data_type = mixed/multimodal</span><span class="ro">THEN storage = lake as landing zone + route by type</span><span class="ro">THEN pattern = Medallion (forced)</span></div>
+    </div>
+  </div>
+
+  <div class="rule">
+    <div class="rule-num">Rule 02 — Hard filter</div>
+    <div class="rule-title">Latency forces the ingestion pattern and processing mode</div>
+    <div class="rule-body">
+      <p style="margin-bottom:.8rem;">Latency is the second hardest constraint. It determines how data enters your system and eliminates architecture patterns that cannot meet the requirement.</p>
+      <div class="rule-row"><span class="ri">IF latency = daily/hourly</span><span class="ro">THEN ingestion = batch (Fivetran / Airbyte / dbt)</span><span class="rw">ELIMINATE Kappa architecture</span></div>
+      <div class="rule-row"><span class="ri">IF latency = 5–15 minutes</span><span class="ro">THEN ingestion = micro-batch (Spark Structured Streaming)</span><span class="rw">ELIMINATE full streaming overhead</span></div>
+      <div class="rule-row"><span class="ri">IF latency = under 1 minute</span><span class="ro">THEN ingestion = streaming (Kafka / Kinesis / Pub/Sub)</span><span class="ro">THEN processing = Flink / Spark Streaming</span><span class="rw">ELIMINATE batch-only stacks</span></div>
+      <div class="rule-row"><span class="ri">IF latency = sub-second</span><span class="ro">THEN ingestion = streaming + in-memory serving (Redis)</span><span class="rw">ELIMINATE DW in the hot path</span></div>
+    </div>
+  </div>
+
+  <div class="rule">
+    <div class="rule-num">Rule 03 — Pattern selection</div>
+    <div class="rule-title">Architecture pattern defines the overall layer structure</div>
+    <div class="rule-body">
+      <p style="margin-bottom:.8rem;">Once data type and latency are set, the pattern determines how layers are organised. Some patterns are incompatible with certain latency requirements or team sizes — the engine rejects them.</p>
+      <div class="rule-row"><span class="ri">IF pattern = Medallion</span><span class="ro">THEN layers = Bronze → Silver → Gold</span><span class="ro">THEN transform = dbt (SQL-first)</span></div>
+      <div class="rule-row"><span class="ri">IF pattern = Lambda</span><span class="ro">THEN layers = batch_path + speed_path + serving_merge</span><span class="rw">WARNING: same business logic written twice</span></div>
+      <div class="rule-row"><span class="ri">IF pattern = Kappa</span><span class="ro">THEN layers = event_log + stream_processor + serving</span><span class="rw">REQUIRE latency = streaming (Rule 02)</span><span class="rw">REQUIRE event log retention ≥ 30 days</span></div>
+      <div class="rule-row"><span class="ri">IF pattern = Data Mesh</span><span class="ro">THEN add domain_ownership + self_serve_platform layers</span><span class="rw">REQUIRE team_size = enterprise (50+ engineers)</span></div>
+      <div class="rule-row"><span class="ri">IF pattern = auto</span><span class="ro">THEN pick = Medallion (batch/micro-batch) OR Lambda (streaming) based on Rule 02</span></div>
+    </div>
+  </div>
+
+  <div class="rule">
+    <div class="rule-num">Rule 04 — Tool selection</div>
+    <div class="rule-title">Cloud maps each layer to specific named tools</div>
+    <div class="rule-body">
+      <p style="margin-bottom:.8rem;">Once the pattern and layers are defined, the cloud choice fills in the specific product names. This is a deterministic lookup — every layer maps to a specific tool per cloud.</p>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Layer</th><th>AWS</th><th>GCP</th><th>Azure</th><th>OSS</th></tr></thead>
+        <tbody>
+          <tr><td>Streaming ingest</td><td>Kinesis</td><td>Pub/Sub</td><td>Event Hubs</td><td>Apache Kafka</td></tr>
+          <tr><td>Batch ingest</td><td>Fivetran / DMS</td><td>Fivetran / Transfer</td><td>Fivetran / ADF</td><td>Airbyte / Debezium</td></tr>
+          <tr><td>Raw storage</td><td>S3 + Glue Catalog</td><td>GCS + Dataplex</td><td>ADLS Gen2 + Purview</td><td>MinIO + Hive</td></tr>
+          <tr><td>Batch transform</td><td>Glue + dbt / EMR</td><td>Dataflow + dbt</td><td>Synapse + dbt</td><td>Spark + dbt</td></tr>
+          <tr><td>Stream transform</td><td>Kinesis Analytics</td><td>Dataflow Stream</td><td>Stream Analytics</td><td>Apache Flink</td></tr>
+          <tr><td>Warehouse</td><td>Redshift</td><td>BigQuery</td><td>Synapse Analytics</td><td>Trino + Iceberg</td></tr>
+          <tr><td>Orchestration</td><td>MWAA / Step Functions</td><td>Cloud Composer</td><td>ADF Pipelines</td><td>Airflow / Dagster</td></tr>
+          <tr><td>BI / Serve</td><td>QuickSight</td><td>Looker</td><td>Power BI</td><td>Superset / Metabase</td></tr>
+          <tr><td>Governance</td><td>Lake Formation</td><td>Dataplex</td><td>Purview</td><td>DataHub</td></tr>
+          <tr><td>Feature store</td><td>SageMaker FS</td><td>Vertex FS</td><td>Azure ML FS</td><td>Feast</td></tr>
+          <tr><td>Vector store</td><td>OpenSearch / pgvector</td><td>Vertex Matching Engine</td><td>Azure AI Search</td><td>Weaviate / Qdrant</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <div class="rule">
+    <div class="rule-num">Rule 05 — Complexity filter</div>
+    <div class="rule-title">Team size swaps managed tools for self-hosted tools</div>
+    <div class="rule-body">
+      <p style="margin-bottom:.8rem;">The same logical layer gets different tools depending on team size. A startup should never self-host Kafka. An enterprise may prefer OSS to avoid vendor lock-in at scale.</p>
+      <div class="rule-row"><span class="ri">IF team = startup (1–3 DEs)</span><span class="ro">THEN all tools = managed/SaaS only</span><span class="rw">ELIMINATE self-hosted Kafka, Flink, Airflow, Spark</span></div>
+      <div class="rule-row"><span class="ri">IF team = mid-size (5–15 DEs)</span><span class="ro">THEN ingest = managed, transform = dbt + Spark, orchestration = managed Airflow</span></div>
+      <div class="rule-row"><span class="ri">IF team = enterprise (50+ DEs)</span><span class="ro">THEN self-hosted = acceptable</span><span class="ro">THEN governance = mandatory</span><span class="ro">THEN data_mesh = possible</span></div>
+    </div>
+  </div>
+
+  <div class="rule">
+    <div class="rule-num">Rule 06 — Additive layer</div>
+    <div class="rule-title">AI need adds Feature Store and/or Vector Store on top</div>
+    <div class="rule-body">
+      <p style="margin-bottom:.8rem;">The AI layer is additive — it does not replace any existing layer. It sits between transform and serving. If not needed, it is skipped entirely to keep the stack minimal.</p>
+      <div class="rule-row"><span class="ri">IF ai_need = ML models</span><span class="ro">THEN add feature_store (cloud-specific)</span><span class="ro">THEN add model_registry (MLflow or managed)</span></div>
+      <div class="rule-row"><span class="ri">IF ai_need = LLM/RAG</span><span class="ro">THEN add vector_store (cloud-specific)</span><span class="ro">THEN add embedding_pipeline (LangChain / LlamaIndex)</span></div>
+      <div class="rule-row"><span class="ri">IF ai_need = none</span><span class="ro">THEN skip AI layer entirely</span></div>
+    </div>
+  </div>
+
+  <div class="rule">
+    <div class="rule-num">Rule 07 — Override rule</div>
+    <div class="rule-title">Snowflake and Databricks are cloud-agnostic overrides</div>
+    <div class="rule-body">
+      <p style="margin-bottom:.8rem;">Snowflake and Databricks run on all three major clouds. If selected, they replace the cloud-native warehouse from Rule 04 — but all other cloud-specific tools remain unchanged.</p>
+      <div class="rule-row"><span class="ri">IF warehouse_override = Snowflake</span><span class="ro">THEN warehouse = Snowflake (replaces Redshift / BigQuery / Synapse)</span><span class="ro">THEN table_format = Iceberg</span></div>
+      <div class="rule-row"><span class="ri">IF warehouse_override = Databricks</span><span class="ro">THEN warehouse + transform = Databricks Lakehouse</span><span class="ro">THEN table_format = Delta Lake</span><span class="ro">THEN dbt runs on Databricks SQL</span></div>
+    </div>
+  </div>
+
+  <div class="rule">
+    <div class="rule-num">Rule 08 — Compliance overlay</div>
+    <div class="rule-title">Regulated industries add mandatory security and governance requirements</div>
+    <div class="rule-body">
+      <p style="margin-bottom:.8rem;">Healthcare (HIPAA), finance (SOX, PCI-DSS), and EU companies (GDPR) have non-negotiable requirements that layer on top of the base stack.</p>
+      <div class="rule-row"><span class="ri">IF compliance = HIPAA</span><span class="ro">THEN encryption = at-rest + in-transit (mandatory)</span><span class="ro">THEN audit_log = all data access</span><span class="rw">ELIMINATE any tool without BAA</span></div>
+      <div class="rule-row"><span class="ri">IF compliance = GDPR</span><span class="ro">THEN PII = masked at Bronze OR separate vault</span><span class="ro">THEN data_residency = EU region only</span><span class="ro">THEN design for right_to_erasure</span></div>
+      <div class="rule-row"><span class="ri">IF compliance = PCI-DSS</span><span class="ro">THEN card_data = tokenise before pipeline</span><span class="ro">THEN network = isolated VPC / private endpoints</span></div>
+    </div>
+  </div>
+
+  <div class="rule">
+    <div class="rule-num">Rule 09 — Scale check</div>
+    <div class="rule-title">Data volume changes the transform and storage tier</div>
+    <div class="rule-body">
+      <p style="margin-bottom:.8rem;">Volume estimates change which specific tools are appropriate. A 1 GB/day pipeline and a 1 TB/day pipeline both use dbt — but very different infrastructure behind it.</p>
+      <div class="rule-row"><span class="ri">IF volume &lt; 100 GB/day</span><span class="ro">THEN transform = dbt on warehouse only (no Spark needed)</span></div>
+      <div class="rule-row"><span class="ri">IF volume = 100 GB – 10 TB/day</span><span class="ro">THEN transform = dbt + Spark for heavy models</span><span class="ro">THEN partitioning = mandatory</span></div>
+      <div class="rule-row"><span class="ri">IF volume &gt; 10 TB/day</span><span class="ro">THEN transform = Spark / Flink primary</span><span class="ro">THEN storage = Lakehouse (lake-first)</span><span class="rw">WARN: dbt alone too slow for raw layer at this scale</span></div>
+    </div>
+  </div>
+
+  <div class="rule">
+    <div class="rule-num">Rule 10 — Why-not library</div>
+    <div class="rule-title">Every rejected option gets an explicit explanation</div>
+    <div class="rule-body">
+      <p style="margin-bottom:.8rem;">The output always includes what you did NOT choose and why. This is the most valuable part for interviews and architectural discussions — reasoning, not just recommendations.</p>
+      <div class="rule-row"><span class="ri">IF Kafka eliminated</span><span class="rw">WHY NOT: Your latency is batch/hourly. Kafka adds broker management, partition tuning, and consumer group complexity with zero latency benefit when you don't need sub-minute freshness.</span></div>
+      <div class="rule-row"><span class="ri">IF Lambda eliminated</span><span class="rw">WHY NOT: Lambda requires maintaining the same business logic twice — batch code and streaming code. Every logic change must be applied to both. Medallion achieves your goals with a single codebase.</span></div>
+      <div class="rule-row"><span class="ri">IF Data Mesh eliminated</span><span class="rw">WHY NOT: Mesh requires autonomous domain teams with data engineering skills, a self-serve platform, and federated governance. At your team size, the overhead of domain ownership outweighs the benefits.</span></div>
+      <div class="rule-row"><span class="ri">IF self-hosted Airflow eliminated</span><span class="rw">WHY NOT: A small team cannot afford to spend 30%+ of their time on Airflow infrastructure. Use a managed option and spend that time building data products instead.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── WALKTHROUGH ─── -->
+<section id="walkthrough">
+  <div class="sec-label">Section 04</div>
+  <h2>Rules <span>Walkthrough</span></h2>
+  <p>Two worked examples — step by step through every rule to show exactly how the output is derived. Read these before using the designer to understand the logic.</p>
+
+  <h3>// Example 1 — E-commerce startup on AWS</h3>
+  <div class="callout amber">📋 <strong>Scenario:</strong> 3-person data team at an e-commerce company. Postgres app DB + Stripe + Shopify as sources. Analysts need daily sales dashboards. No ML yet. On AWS. Approx 5 GB/day of data.</div>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Rule</th><th>Input</th><th>Decision</th><th>Eliminated</th></tr></thead>
+    <tbody>
+      <tr><td>Rule 01</td><td>data_type = structured + semi-structured</td><td>Storage = DW or Lakehouse — standard path</td><td>Time series DB, graph DB, object store as primary</td></tr>
+      <tr><td>Rule 02</td><td>latency = daily</td><td>ingestion = batch (Fivetran for SaaS, DMS for Postgres)</td><td>Kafka, Kinesis, Flink, Kappa architecture</td></tr>
+      <tr><td>Rule 03</td><td>pattern = Medallion</td><td>layers = Bronze → Silver → Gold, transform = dbt</td><td>Lambda (unnecessary complexity), Kappa (no streaming)</td></tr>
+      <tr><td>Rule 04</td><td>cloud = AWS</td><td>S3 + Glue (Bronze), Redshift (warehouse), MWAA (orchestration), QuickSight (BI)</td><td>All GCP and Azure tools</td></tr>
+      <tr><td>Rule 05</td><td>team = startup (3 DEs)</td><td>All managed tools only. Fivetran over self-hosted Airbyte. MWAA over self-hosted Airflow.</td><td>Self-hosted Kafka, self-hosted Airflow, EMR Spark (overkill)</td></tr>
+      <tr><td>Rule 06</td><td>ai_need = none</td><td>Skip AI layer entirely</td><td>SageMaker Feature Store, OpenSearch vector, MLflow</td></tr>
+      <tr><td>Rule 09</td><td>volume = 5 GB/day</td><td>dbt on Redshift is sufficient. No Spark cluster needed.</td><td>EMR Spark, Databricks</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout green">✓ <strong>Final stack:</strong> Fivetran → S3 + Glue (Bronze) → Redshift → dbt → Redshift Gold → QuickSight. Orchestration: MWAA. Quality: dbt tests. <strong>Total new tools to operate: 4.</strong> Manageable for a small team — no infra, all managed.</div>
+
+  <h3>// Example 2 — Fintech streaming platform on GCP</h3>
+  <div class="callout amber">📋 <strong>Scenario:</strong> 12-person data team at a payments company. Real-time fraud detection required (under 30 second latency). ML models needed in production. GDPR compliance (EU customers). On GCP. ~500 GB/day.</div>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Rule</th><th>Input</th><th>Decision</th><th>Eliminated</th></tr></thead>
+    <tbody>
+      <tr><td>Rule 01</td><td>data_type = structured (transactions)</td><td>DW or Lakehouse as primary. Also needs fast serving for real-time ML inference.</td><td>Time series DB, graph DB as primary</td></tr>
+      <tr><td>Rule 02</td><td>latency = under 1 minute</td><td>ingestion = Pub/Sub (streaming). processing = Dataflow Streaming.</td><td>Batch-only ingestion, daily ETL patterns</td></tr>
+      <tr><td>Rule 03</td><td>pattern = Lambda</td><td>Batch path (accurate, historical reprocessing) + Speed path (real-time fraud scoring) + merge in BigQuery serving layer</td><td>Kappa (complex historical joins needed for fraud models), Medallion alone (no speed layer)</td></tr>
+      <tr><td>Rule 04</td><td>cloud = GCP</td><td>Pub/Sub (stream ingest), Dataflow (stream + batch transform), GCS (lake), BigQuery (warehouse), Cloud Composer (orchestration), Looker (BI), Vertex AI (ML)</td><td>All AWS and Azure tools</td></tr>
+      <tr><td>Rule 05</td><td>team = mid-size (12 DEs)</td><td>Managed tools preferred. Cloud Composer over self-hosted Airflow. Dataflow over self-hosted Flink.</td><td>Self-hosted Kafka (use Pub/Sub), self-hosted Flink</td></tr>
+      <tr><td>Rule 06</td><td>ai_need = ML models (fraud)</td><td>Add Vertex AI Feature Store + Vertex AI Model Registry + online prediction endpoint</td><td>—</td></tr>
+      <tr><td>Rule 08</td><td>compliance = GDPR</td><td>PII masked at Bronze before Silver. EU region only (europe-west1). Audit logs on all data access. Right-to-erasure: store user_id references, not PII copies in every table.</td><td>Cross-region PII replication</td></tr>
+      <tr><td>Rule 09</td><td>volume = 500 GB/day</td><td>dbt + Dataflow for heavy transforms. Partitioning mandatory on all BigQuery tables by date.</td><td>dbt-only for raw layer (too slow at this volume)</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout green">✓ <strong>Final stack:</strong> Pub/Sub → Dataflow Stream (speed path) + GCS → Dataflow Batch + dbt → BigQuery → Looker. ML: Vertex Feature Store + Vertex AI. Orchestration: Cloud Composer. GDPR: PII masked at Bronze, EU region enforced, audit logs enabled.</div>
+</section>
+
+<!-- ─── DESIGNER ─── -->
+<section id="designer">
+  <div class="sec-label">Section 05 — Interactive</div>
+  <h2>Architecture <span>Designer</span></h2>
+  <p>Answer the 6 questions below. The rules engine runs automatically and generates your complete named stack — with an architecture diagram and the reasoning behind every choice.</p>
+
+  <div class="wizard" id="main-wizard">
+    <div class="wizard-header">
+      <span class="wizard-title" id="wiz-title">Step 1 of 6</span>
+      <div class="wizard-progress" id="wiz-progress"></div>
+    </div>
+    <div class="wizard-body" id="wiz-body"></div>
+  </div>
+
+  <div class="output-wrap" id="output-wrap">
+    <div class="output-header">
+      <span class="output-title">✓ Architecture Generated</span>
+      <button class="output-reset" onclick="resetWizard()">↺ Start over</button>
+    </div>
+    <div class="output-body" id="output-body">
+      <div class="stack-name" id="out-name"></div>
+      <div class="stack-desc" id="out-desc"></div>
+      <div class="stack-layers" id="out-layers"></div>
+      <div class="diagram-wrap">
+        <div class="diagram-header"><span id="diag-title">Architecture Diagram</span><span style="font-size:.65rem;">hover boxes for details</span></div>
+        <div class="diagram-scroll"><svg class="diag" id="svg-output" viewBox="0 0 720 120" style="width:100%;min-width:500px;"></svg></div>
+        <div class="legend" id="diag-legend"></div>
+      </div>
+      <div class="why-not-wrap">
+        <div class="why-not-title">// What you did NOT choose — and why</div>
+        <div id="out-whynot"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Data Engineering Guide · <a href="data_architure.html">← Architecture</a> · <a href="datamodelling.html">← Data Modelling</a>
+</footer>
+
+<script>
+const C={blue:'#58a6ff',purple:'#bc8cff',amber:'#e3b341',green:'#3fb950',warn:'#f78166',bronze:'#cd7f32',silver:'#8b949e',surface:'#161b22',surface2:'#1f2937',border:'#30363d',text:'#e6edf3',muted:'#8b949e'};
+
+const tipEl=document.getElementById('tip');
+function showTip(e,t){tipEl.style.display='block';tipEl.textContent=t;moveTip(e);}
+function moveTip(e){tipEl.style.left=(e.clientX+14)+'px';tipEl.style.top=(e.clientY-10)+'px';}
+function hideTip(){tipEl.style.display='none';}
+
+function ns(tag,attrs){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.entries(attrs||{}).forEach(([k,v])=>e.setAttribute(k,v));return e;}
+function clearSVG(id){const s=document.getElementById(id);if(!s)return s;while(s.firstChild)s.removeChild(s.firstChild);const d=ns('defs');d.innerHTML=`<marker id="arr" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="${C.muted}"/></marker>`;s.appendChild(d);return s;}
+function arrow(svg,x1,y1,x2,y2){svg.appendChild(ns('line',{x1,y1,x2,y2,stroke:C.muted,'stroke-width':1.5,'stroke-dasharray':'5 3','marker-end':'url(#arr)'}));}
+function txt(p,x,y,t,fill,size,weight,anchor){const e=ns('text',{x,y,fill:fill||C.muted,'font-family':'IBM Plex Mono','font-size':size||10,'font-weight':weight||400,'text-anchor':anchor||'start'});e.textContent=t;p.appendChild(e);}
+
+function svgBox(svg,x,y,w,h,color,label,sub,tooltip){
+  const g=ns('g');
+  g.appendChild(ns('rect',{x,y,width:w,height:h,rx:6,fill:C.surface2,stroke:color,'stroke-width':1.5}));
+  g.appendChild(ns('rect',{x:x+1,y:y+1,width:w-2,height:4,rx:5,fill:color,opacity:.7}));
+  txt(g,x+w/2,y+18,label,color,10,600,'middle');
+  if(sub){
+    const words=sub.length>16?[sub.slice(0,Math.ceil(sub.length/2)),sub.slice(Math.ceil(sub.length/2))]:null;
+    if(words){
+      txt(g,x+w/2,y+32,words[0].trim(),C.muted,8,400,'middle');
+      txt(g,x+w/2,y+42,words[1].trim(),C.muted,8,400,'middle');
+    } else {
+      txt(g,x+w/2,y+33,sub,C.muted,9,400,'middle');
+    }
+  }
+  if(tooltip){
+    g.style.cursor='pointer';
+    g.addEventListener('mouseenter',e=>showTip(e,tooltip));
+    g.addEventListener('mousemove',moveTip);
+    g.addEventListener('mouseleave',hideTip);
+  }
+  svg.appendChild(g);
+}
+
+// ── WIZARD QUESTIONS ──
+const QUESTIONS=[
+  {id:'datatype',q:'What kind of data are you working with?',sub:'The most important question — data type determines what storage systems are physically possible.',
+   opts:[
+    {l:'Structured',sub:'SQL tables, rows & columns, CRM, ERP, app databases',v:'structured'},
+    {l:'Semi-structured',sub:'JSON events, API responses, logs, Avro, Parquet files',v:'semi'},
+    {l:'Documents / PDFs',sub:'Contracts, emails, invoices — need parsing and extraction',v:'documents'},
+    {l:'Images / Video / Audio',sub:'Media files — object store + CV/ASR models required',v:'media'},
+    {l:'Time Series / IoT',sub:'Sensor readings, metrics, stock prices, monitoring data',v:'timeseries'},
+    {l:'Mixed / Multimodal',sub:'Multiple data types together — route each to the right store',v:'mixed'}
+  ]},
+  {id:'latency',q:'What latency does the business actually require?',sub:'Be honest. Most "real-time" needs are micro-batch. Clarify before deciding.',
+   opts:[
+    {l:'Daily / Hourly',sub:'Overnight DW loads, daily reports, data ready by 8am',v:'batch'},
+    {l:'5–15 minutes',sub:'Near real-time dashboards, frequently refreshed metrics',v:'microbatch'},
+    {l:'Under 1 minute',sub:'Hard SLA — fraud detection, live inventory, real-time alerts',v:'streaming'},
+    {l:'Sub-second',sub:'Millisecond latency — high-frequency, in-memory serving layer',v:'realtime'}
+  ]},
+  {id:'pattern',q:'Which architecture pattern fits your situation?',sub:'If unsure, pick "Recommend one for me" — the engine will choose based on your other answers.',
+   opts:[
+    {l:'Medallion',sub:'Bronze→Silver→Gold. Best for 90% of teams. dbt-friendly.',v:'medallion'},
+    {l:'Lambda',sub:'Batch path + Speed path merged at serving. More complex.',v:'lambda'},
+    {l:'Kappa',sub:'Everything is streaming. Replay event log for historical data.',v:'kappa'},
+    {l:'Data Mesh',sub:'Decentralised domain ownership. Needs 50+ engineers.',v:'mesh'},
+    {l:'Zero ETL',sub:'Native replication — no pipeline. Same-vendor source + DW only.',v:'zeroetl'},
+    {l:'Recommend one for me',sub:'Rules engine picks based on your latency and team size.',v:'auto'}
+  ]},
+  {id:'cloud',q:'Which cloud or deployment model?',sub:'Pick where your infrastructure lives, or where you plan to build.',
+   opts:[
+    {l:'AWS',sub:'Amazon Web Services — broadest ecosystem, most tool choices',v:'aws'},
+    {l:'GCP',sub:'Google Cloud — BigQuery-first, ML-heavy, Pub/Sub streaming',v:'gcp'},
+    {l:'Azure',sub:'Microsoft stack — SQL Server, Dynamics, Power BI, Teams',v:'azure'},
+    {l:'OSS / Multi-cloud',sub:'Open source tools, avoid vendor lock-in, Kubernetes-native',v:'oss'}
+  ]},
+  {id:'teamsize',q:'How large is your data engineering team?',sub:'This determines managed vs self-hosted tools and the operational complexity ceiling.',
+   opts:[
+    {l:'Startup (1–3 DEs)',sub:'Minimise ops burden. Managed tools only. Ship fast.',v:'startup'},
+    {l:'Mid-size (5–15 DEs)',sub:'Mix of managed + custom. Can operate Airflow and Spark.',v:'midsize'},
+    {l:'Enterprise (50+ DEs)',sub:'Self-hosted acceptable. Governance and mesh possible.',v:'enterprise'}
+  ]},
+  {id:'ai',q:'Do you need an AI / ML layer?',sub:'This adds Feature Store, Vector Store, or both on top of your stack.',
+   opts:[
+    {l:'No AI needed',sub:'Keep the stack minimal — skip this layer entirely',v:'none'},
+    {l:'ML Models in production',sub:'Feature Store + Model Registry for training and serving',v:'ml'},
+    {l:'LLM / RAG application',sub:'Vector Store + embedding pipeline for semantic search',v:'llm'},
+    {l:'Both ML + LLM',sub:'Full AI layer — Feature Store + Vector Store + Model Registry',v:'both'}
+  ]}
+];
+
+// ── RULES ENGINE ──
+const TOOLS={
+  aws:{
+    streamIngest:'Amazon Kinesis',batchIngest:'Fivetran + AWS DMS',batchIngestSmall:'Fivetran',
+    rawStorage:'Amazon S3 + AWS Glue Catalog',tableFormat:'Apache Iceberg on S3',
+    batchTransform:'dbt on Redshift + AWS Glue',batchTransformSmall:'dbt on Redshift',
+    streamTransform:'Amazon Kinesis Analytics / Flink on EMR',
+    warehouse:'Amazon Redshift',lakehouse:'Redshift + S3 Iceberg',
+    orchestration:'Amazon MWAA (managed Airflow)',orchestrationEnt:'MWAA + Step Functions',
+    bi:'Amazon QuickSight',governance:'AWS Lake Formation + Glue Catalog',
+    quality:'dbt tests + Monte Carlo',featureStore:'Amazon SageMaker Feature Store',
+    vectorStore:'Amazon OpenSearch / pgvector on RDS',modelRegistry:'Amazon SageMaker Model Registry',
+    timeseries:'Amazon Timestream',objectStore:'Amazon S3',
+  },
+  gcp:{
+    streamIngest:'Google Cloud Pub/Sub',batchIngest:'Fivetran + Cloud Data Transfer',batchIngestSmall:'Fivetran',
+    rawStorage:'Google Cloud Storage + Dataplex',tableFormat:'Apache Iceberg on GCS',
+    batchTransform:'dbt on BigQuery + Cloud Dataflow',batchTransformSmall:'dbt on BigQuery',
+    streamTransform:'Cloud Dataflow (Apache Beam)',
+    warehouse:'Google BigQuery',lakehouse:'BigQuery + GCS Iceberg',
+    orchestration:'Google Cloud Composer',orchestrationEnt:'Cloud Composer + Cloud Workflows',
+    bi:'Google Looker',governance:'Google Dataplex + Data Catalog',
+    quality:'dbt tests + Monte Carlo',featureStore:'Vertex AI Feature Store',
+    vectorStore:'Vertex AI Matching Engine / pgvector on Cloud SQL',modelRegistry:'Vertex AI Model Registry',
+    timeseries:'Google Cloud Bigtable (time series)',objectStore:'Google Cloud Storage (GCS)',
+  },
+  azure:{
+    streamIngest:'Azure Event Hubs',batchIngest:'Fivetran + Azure Data Factory',batchIngestSmall:'Fivetran',
+    rawStorage:'Azure Data Lake Storage Gen2 (ADLS)',tableFormat:'Delta Lake on ADLS Gen2',
+    batchTransform:'dbt on Synapse + Azure Synapse Spark',batchTransformSmall:'dbt on Synapse Analytics',
+    streamTransform:'Azure Stream Analytics / Apache Flink',
+    warehouse:'Azure Synapse Analytics',lakehouse:'Synapse + ADLS Delta Lake',
+    orchestration:'Azure Data Factory Pipelines',orchestrationEnt:'Azure Data Factory + Airflow on AKS',
+    bi:'Microsoft Power BI',governance:'Microsoft Purview',
+    quality:'dbt tests + Soda',featureStore:'Azure Machine Learning Feature Store',
+    vectorStore:'Azure AI Search (vector index)',modelRegistry:'Azure Machine Learning Registry',
+    timeseries:'Azure Data Explorer (ADX)',objectStore:'Azure Blob Storage',
+  },
+  oss:{
+    streamIngest:'Apache Kafka',batchIngest:'Airbyte + Debezium (CDC)',batchIngestSmall:'Airbyte',
+    rawStorage:'MinIO + Apache Hive Metastore',tableFormat:'Apache Iceberg or Delta Lake',
+    batchTransform:'dbt + Apache Spark',batchTransformSmall:'dbt + DuckDB',
+    streamTransform:'Apache Flink',
+    warehouse:'Trino + Apache Iceberg',lakehouse:'Apache Spark + Delta Lake',
+    orchestration:'Prefect Cloud',orchestrationEnt:'Apache Airflow or Dagster',
+    bi:'Apache Superset / Metabase',governance:'DataHub + Apache Atlas',
+    quality:'dbt tests + Great Expectations',featureStore:'Feast (open source)',
+    vectorStore:'Weaviate or Qdrant (self-hosted)',modelRegistry:'MLflow',
+    timeseries:'InfluxDB / TimescaleDB / QuestDB',objectStore:'MinIO',
+  }
+};
+
+function runRules(ans){
+  const {datatype,latency,pattern,cloud,teamsize,ai}=ans;
+  const T=TOOLS[cloud]||TOOLS.aws;
+  const small=teamsize==='startup';
+  const ent=teamsize==='enterprise';
+
+  // Rule 01 — data type
+  let storageCategory='dw';
+  let forceAI=false;
+  if(datatype==='timeseries') storageCategory='timeseries';
+  else if(datatype==='media') storageCategory='media';
+  else if(datatype==='documents'){storageCategory='documents';forceAI=true;}
+  else if(datatype==='mixed') storageCategory='mixed';
+
+  // Rule 02 — latency
+  let ingest='batch';
+  if(latency==='microbatch') ingest='microbatch';
+  else if(latency==='streaming') ingest='streaming';
+  else if(latency==='realtime') ingest='realtime';
+
+  // Rule 03 — pattern
+  let pat=pattern;
+  if(pat==='auto'){
+    if(ingest==='batch'||ingest==='microbatch') pat='medallion';
+    else if(ingest==='streaming') pat='lambda';
+    else pat='kappa';
+  }
+  if(storageCategory==='mixed'&&pat==='zeroetl') pat='medallion';
+
+  // Build layers
+  const layers=[];
+  const diag=[];
+  const whynot=[];
+
+  // Source
+  layers.push({label:'Sources',tool:'App DBs · APIs · SaaS Tools · Files · Event Streams',color:C.blue,why:'All data originates from source systems. Identify every source — operational databases, third-party SaaS, event producers, files — before designing ingestion.'});
+  diag.push({label:'Source',sub:'DBs / APIs',color:C.blue,tip:'All data originates here — app databases, SaaS tools, events, files'});
+
+  // Ingestion
+  if(ingest==='batch'||ingest==='microbatch'){
+    const tool=small?T.batchIngestSmall:T.batchIngest;
+    layers.push({label:'Ingestion',tool,color:C.purple,why:ingest==='batch'?'Batch ingestion on a schedule. Managed connectors handle SaaS sources (Salesforce, Stripe, HubSpot) automatically. DMS or Debezium for databases needing CDC.':'Micro-batch — same tools as batch but scheduled every 5–15 minutes. Near real-time feel without the operational complexity of true streaming.'});
+    diag.push({label:'Ingestion',sub:tool.split('+')[0].trim().split(' ').slice(-1)[0],color:C.purple,tip:'Batch ingestion: '+tool});
+    if(ingest==='batch') whynot.push({tool:'Apache Kafka / Kinesis',reason:'Your latency requirement is '+( latency==='batch'?'daily/hourly batch':'micro-batch (5–15 min)')+'. Kafka and Kinesis add broker management, partition tuning, consumer group complexity, and offset tracking — with zero latency benefit when you do not need sub-minute freshness. Use them only when latency under 1 minute is a hard business requirement.'});
+  }
+  if(ingest==='streaming'||ingest==='realtime'){
+    layers.push({label:'Stream Ingestion',tool:T.streamIngest,color:C.purple,why:'Real-time event streaming. Events are published to a managed message bus as they happen. Sub-second latency from source to pipeline. Producers write; consumers read at their own pace.'});
+    diag.push({label:'Stream Ingest',sub:T.streamIngest.split(' ').slice(0,2).join(' '),color:C.purple,tip:'Streaming ingestion: '+T.streamIngest});
+    layers.push({label:'Stream Processing',tool:T.streamTransform,color:C.warn,why:'Real-time transforms run continuously as events arrive — windowed aggregations, enrichment with reference data, filtering bad events, joining streams. Required for sub-minute latency.'});
+    diag.push({label:'Stream Process',sub:T.streamTransform.split(' ')[0],color:C.warn,tip:'Stream processing: '+T.streamTransform});
+  }
+
+  // Storage
+  if(storageCategory==='timeseries'){
+    layers.push({label:'Time Series Storage',tool:T.timeseries,color:C.bronze,why:'Time series databases are purpose-built for sensor and metric data. They provide automatic downsampling, data retention policies, and time-range queries that are orders of magnitude faster than a general-purpose DW for this data type.'});
+    diag.push({label:'Time Series DB',sub:T.timeseries.split(' ')[0],color:C.bronze,tip:'Time series storage: '+T.timeseries});
+    whynot.push({tool:'Standard Data Warehouse (Snowflake / BigQuery / Redshift)',reason:'A DW can store time series data but is not optimised for it. High-frequency time-range queries on billions of sensor readings are 10–100x slower in a columnar DW than in a purpose-built TSDB with time-based indexing and compression.'});
+  } else if(storageCategory==='media'){
+    layers.push({label:'Object Storage',tool:T.objectStore,color:C.bronze,why:'Media files (images, video, audio) cannot be stored in a database or DW. Object storage is the only option — infinitely scalable, very cheap per GB, and designed for large binary blobs. The DW only receives extracted metadata.'});
+    diag.push({label:'Object Store',sub:T.objectStore.split(' ')[0],color:C.bronze,tip:'Object storage: '+T.objectStore});
+    layers.push({label:'Metadata Warehouse',tool:T.warehouse,color:C.silver,why:'After the AI/CV pipeline processes the media files, the extracted metadata (labels, transcriptions, classifications, embeddings) is stored in the warehouse for SQL analytics and reporting.'});
+    diag.push({label:'Metadata DW',sub:T.warehouse.split(' ')[0],color:C.silver,tip:'Warehouse for extracted metadata: '+T.warehouse});
+  } else if(storageCategory==='documents'){
+    layers.push({label:'Object Storage',tool:T.objectStore,color:C.bronze,why:'PDFs and documents are binary files — they must land in object storage first. From there, an LLM or document parser extracts structured information and populates the DW, and embeddings go to the vector store.'});
+    diag.push({label:'Object Store',sub:T.objectStore.split(' ')[0],color:C.bronze,tip:'Raw document storage: '+T.objectStore});
+  } else {
+    // Standard DW/Lakehouse path
+    if(pat==='medallion'||pat==='lambda'||pat==='mesh'){
+      layers.push({label:'Bronze — Raw Lake',tool:T.rawStorage,color:C.bronze,why:'Raw, untransformed copy of every source. Never modified. Never deleted. If your transforms have bugs, you reprocess from Bronze. If requirements change, you replay Bronze. It is your insurance policy.'});
+      diag.push({label:'Bronze',sub:T.rawStorage.split('+')[0].trim().split(' ').slice(0,2).join(' '),color:C.bronze,tip:'Raw storage: '+T.rawStorage});
+      layers.push({label:'Table Format',tool:T.tableFormat,color:C.silver,why:'Open table format adds ACID transactions, schema evolution, time travel, and partition pruning to your lake. Turns cheap object storage into a Lakehouse — you get warehouse-like capabilities at lake prices.'});
+    }
+    if(pat==='kappa'){
+      layers.push({label:'Event Log',tool:T.streamIngest+' (30–90 day retention)',color:C.bronze,why:'In Kappa architecture, the event log IS the source of truth. Keep all events for 30–90 days. Historical reprocessing means replaying from any point in the log — no separate batch layer needed.'});
+      diag.push({label:'Event Log',sub:T.streamIngest.split(' ')[0],color:C.bronze,tip:'Event log (long retention): '+T.streamIngest});
+    }
+    if(pat==='zeroetl'){
+      layers.push({label:'Zero ETL Replication',tool:'Native vendor replication (no pipeline code)',color:C.purple,why:'Zero ETL eliminates the ingestion pipeline entirely. Data replicates automatically from source to warehouse at the vendor level. Only possible with same-vendor pairs: Aurora→Redshift, DynamoDB→Redshift on AWS.'});
+      diag.push({label:'Zero ETL',sub:'Native sync',color:C.purple,tip:'No pipeline — native vendor replication'});
+    }
+    // Transform
+    if(pat!=='zeroetl'){
+      const transformTool=small?T.batchTransformSmall:T.batchTransform;
+      layers.push({label:'Transform — Silver → Gold',tool:transformTool,color:C.amber,why:'dbt handles SQL transforms with version control, testing, and documentation built in. Add Spark for models too large or complex for the warehouse to handle. The Bronze→Silver transform cleans and deduplicates. Silver→Gold applies business logic.'});
+      diag.push({label:'Transform',sub:'dbt',color:C.amber,tip:'Transform layer: '+transformTool});
+    }
+    // Warehouse
+    layers.push({label:'Data Warehouse',tool:T.warehouse,color:C.silver,why:'The serving layer for analysts and BI tools. Optimised for fast SQL queries across large datasets. The Gold layer lives here — business-ready aggregations in star schema or wide tables.'});
+    diag.push({label:'Warehouse',sub:T.warehouse.split(' ')[0],color:C.silver,tip:'Warehouse / serving: '+T.warehouse});
+  }
+
+  // AI Layer — Rule 06
+  const aiNeed=forceAI&&ai==='none'?'llm':ai;
+  if(aiNeed==='ml'||aiNeed==='both'){
+    layers.push({label:'Feature Store',tool:T.featureStore,color:C.purple,why:'Stores pre-computed ML features consistently between training and serving time. Eliminates training-serving skew — the most common and most expensive bug in production ML systems.'});
+    layers.push({label:'Model Registry',tool:T.modelRegistry,color:C.purple,why:'Version control for ML models. Tracks experiments, performance metrics, hyperparameters. Enables safe rollback, A/B testing, and regulatory audit trails for model decisions.'});
+    diag.push({label:'Feature Store',sub:T.featureStore.split(' ').slice(0,2).join(' '),color:C.purple,tip:'Feature store: '+T.featureStore});
+  }
+  if(aiNeed==='llm'||aiNeed==='both'){
+    layers.push({label:'Vector Store',tool:T.vectorStore,color:C.blue,why:'Stores embedding vectors for semantic search and RAG pipelines. Enables LLM applications to retrieve relevant context from your private data at query time — without exposing raw data to the model.'});
+    diag.push({label:'Vector Store',sub:T.vectorStore.split(' ')[0],color:C.blue,tip:'Vector store: '+T.vectorStore});
+  }
+
+  // Orchestration
+  const orchTool=ent?T.orchestrationEnt:T.orchestration;
+  layers.push({label:'Orchestration',tool:orchTool,color:C.amber,why:'Manages task dependencies, scheduling, retries, and SLA alerts across every pipeline. Without orchestration you have disconnected cron jobs with no visibility into failures, dependencies, or data freshness.'});
+
+  // BI
+  layers.push({label:'BI / Serving',tool:T.bi,color:C.green,why:'The consumption layer where analysts and business users access data. Connects to the Gold layer. Dashboards, reports, and ad-hoc SQL queries all run here.'});
+  diag.push({label:'BI / Serve',sub:T.bi.split('/')[0].trim().split(' ').slice(-1)[0],color:C.green,tip:'BI and serving: '+T.bi});
+
+  // Governance
+  if(!small){
+    layers.push({label:'Governance',tool:T.governance,color:C.silver,why:'At 5+ engineers, nobody knows what all the tables are or who owns them without a catalog. Governance provides data lineage, ownership, discoverability, and access control at scale.'});
+  }
+
+  // Quality
+  layers.push({label:'Data Quality',tool:T.quality,color:C.green,why:'Automated checks after every pipeline run — null rates, duplicate rates, row count drops, value range violations, referential integrity. Catches data quality issues before analysts find them at 9am.'});
+
+  // Why-nots
+  if(pat!=='lambda') whynot.push({tool:'Lambda Architecture',reason:'Lambda requires maintaining identical business logic in two separate codebases — one for the batch path, one for the streaming speed path. Every logic change must be applied to both simultaneously. When they drift, your batch and real-time numbers disagree. Your chosen pattern achieves the same goals with a single codebase.'});
+  if(pat!=='kappa') whynot.push({tool:'Kappa Architecture',reason:`Kappa requires a long-retention event log and everything to be streaming. Your latency requirement (${latency}) means batch or micro-batch is sufficient — and Kappa's event replay approach makes complex historical joins and backfills significantly harder.`});
+  if(pat!=='mesh') whynot.push({tool:'Data Mesh',reason:`Data Mesh requires autonomous domain teams with data engineering skills embedded in each business domain, a self-serve data platform for those teams, and federated governance. With a ${teamsize} team, the overhead of setting up and maintaining domain ownership structures outweighs the benefits. A well-organised central team is more efficient at this scale.`});
+  if(small) whynot.push({tool:'Self-hosted infrastructure (Kafka / Flink / Airflow)',reason:'A 1–3 person data engineering team cannot sustainably operate self-hosted distributed systems. Kafka cluster management, Flink job failures, and Airflow infrastructure tuning alone could consume 40–60% of available engineering time. Use managed equivalents and invest that time in building data products.'});
+
+  // Stack name
+  const patNames={medallion:'Medallion',lambda:'Lambda',kappa:'Kappa',mesh:'Data Mesh',zeroetl:'Zero ETL',auto:'Medallion'};
+  const cloudNames={aws:'AWS',gcp:'GCP',azure:'Azure',oss:'OSS'};
+  const sizeNames={startup:'Startup',midsize:'Mid-size',enterprise:'Enterprise'};
+  const latencyNames={batch:'Daily batch',microbatch:'Micro-batch',streaming:'Streaming',realtime:'Real-time'};
+  const name=`${sizeNames[teamsize]} ${patNames[pat]} Stack — ${cloudNames[cloud]}`;
+  const desc=`${patNames[pat]} · ${cloudNames[cloud]} · ${latencyNames[latency]} · ${aiNeed==='none'?'No AI layer':aiNeed==='ml'?'+ ML layer':aiNeed==='llm'?'+ LLM/RAG layer':'+ Full AI layer'}`;
+
+  return {name,desc,layers,diag,whynot};
+}
+
+// ── DRAW DIAGRAM ──
+function drawDiagram(diag){
+  const svg=clearSVG('svg-output');
+  if(!svg)return;
+  const n=diag.length;
+  const BW=Math.min(108,Math.floor(680/n)-6);
+  const BH=65;
+  const GAP=Math.max(6,Math.floor((680-n*BW)/(n+1)));
+  const Y=18;
+  const totalH=BH+45;
+  svg.setAttribute('viewBox',`0 0 720 ${totalH}`);
+  diag.forEach((l,i)=>{
+    const x=GAP+i*(BW+GAP);
+    svgBox(svg,x,Y,BW,BH,l.color,l.label,l.sub,l.tip);
+    if(i<n-1) arrow(svg,x+BW+2,Y+BH/2,x+BW+GAP-2,Y+BH/2);
+  });
+  const legend=document.getElementById('diag-legend');
+  const seen=new Set();
+  legend.innerHTML=diag.filter(l=>{if(seen.has(l.color))return false;seen.add(l.color);return true;})
+    .map(l=>`<div class="leg-item"><div class="leg-dot" style="background:${l.color}"></div>${l.label}</div>`).join('');
+}
+
+// ── WIZARD ──
+let step=0,ans={};
+
+function renderWizard(){
+  document.getElementById('wiz-progress').innerHTML=
+    QUESTIONS.map((_,i)=>`<div class="wp-dot ${i<step?'done':i===step?'active':''}"></div>`).join('');
+  document.getElementById('wiz-title').textContent=`Step ${step+1} of ${QUESTIONS.length}`;
+  if(step>=QUESTIONS.length){showOutput();return;}
+  const q=QUESTIONS[step];
+  document.getElementById('wiz-body').innerHTML=`
+    <div class="wiz-q">${q.q}</div>
+    <div class="wiz-sub">${q.sub}</div>
+    <div class="wiz-opts">
+      ${q.opts.map(o=>`<button class="wiz-opt${ans[q.id]===o.v?' sel':''}" onclick="pick('${q.id}','${o.v}',this)">
+        <span class="wiz-opt-label">${o.l}</span>
+        <span class="wiz-opt-sub">${o.sub}</span>
+      </button>`).join('')}
+    </div>
+    <div class="wiz-nav">
+      <button class="wiz-btn primary" id="wiz-next" onclick="next()" ${!ans[q.id]?'disabled':''}>
+        ${step===QUESTIONS.length-1?'Generate Architecture →':'Next →'}
+      </button>
+      ${step>0?'<button class="wiz-btn secondary" onclick="back()">← Back</button>':''}
+      <span class="wiz-step-label">${step+1} / ${QUESTIONS.length}</span>
+    </div>`;
+}
+
+function pick(id,val,btn){
+  ans[id]=val;
+  document.querySelectorAll('.wiz-opt').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  document.getElementById('wiz-next').disabled=false;
+}
+function next(){if(!ans[QUESTIONS[step].id])return;step++;renderWizard();}
+function back(){if(step>0){step--;renderWizard();}}
+function resetWizard(){
+  step=0;ans={};
+  document.getElementById('output-wrap').style.display='none';
+  document.getElementById('main-wizard').style.display='block';
+  renderWizard();
+  document.getElementById('designer').scrollIntoView({behavior:'smooth'});
+}
+
+function showOutput(){
+  document.getElementById('main-wizard').style.display='none';
+  const r=runRules(ans);
+  document.getElementById('out-name').textContent=r.name;
+  document.getElementById('out-desc').textContent=r.desc;
+  document.getElementById('diag-title').textContent=r.name+' — Architecture Diagram';
+  document.getElementById('out-layers').innerHTML=r.layers.map(l=>`
+    <div class="stack-layer">
+      <div class="sl-label" style="color:${l.color}">${l.label}</div>
+      <div>
+        <div class="sl-tool" style="color:${l.color}">${l.tool}</div>
+        <div class="sl-why">${l.why}</div>
+      </div>
+    </div>`).join('');
+  document.getElementById('out-whynot').innerHTML=r.whynot.map(w=>`
+    <div class="why-not-item"><strong>Not ${w.tool}:</strong> ${w.reason}</div>`).join('');
+  const wrap=document.getElementById('output-wrap');
+  wrap.style.display='block';
+  drawDiagram(r.diag);
+  wrap.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+const navLinks=document.querySelectorAll('nav a[href^="#"]');
+window.addEventListener('scroll',()=>{
+  let cur='';
+  document.querySelectorAll('section[id]').forEach(s=>{if(window.scrollY>=s.offsetTop-80)cur=s.id;});
+  navLinks.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+cur));
+});
+
+window.addEventListener('load',()=>{renderWizard();});
+</script>
+</body>
+</html>
