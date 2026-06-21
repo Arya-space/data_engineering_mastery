@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Streaming Internals — DE Guide</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1f2937;--border:#30363d;
+  --blue:#58a6ff;--purple:#bc8cff;--amber:#e3b341;--green:#3fb950;
+  --warn:#f78166;--bronze:#cd7f32;--silver:#8b949e;
+  --text:#e6edf3;--muted:#8b949e;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:300;line-height:1.7;}
+nav{position:sticky;top:0;z-index:100;background:rgba(13,17,23,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1.5rem;height:52px;overflow-x:auto;gap:0;}
+nav a{color:var(--muted);text-decoration:none;font-size:.72rem;font-family:var(--mono);padding:0 .8rem;height:52px;display:flex;align-items:center;border-bottom:2px solid transparent;white-space:nowrap;transition:color .2s,border-color .2s;}
+nav a:hover,nav a.active{color:var(--blue);border-bottom-color:var(--blue);}
+.nav-brand{color:var(--text)!important;font-weight:600!important;border-right:1px solid var(--border);padding-right:1rem!important;margin-right:.3rem;}
+.hero{padding:5rem 2rem 4rem;max-width:900px;margin:0 auto;}
+.hero-tag{font-family:var(--mono);font-size:.68rem;color:var(--warn);letter-spacing:.14em;text-transform:uppercase;margin-bottom:1rem;}
+.hero h1{font-size:clamp(2rem,5vw,3.2rem);font-weight:600;line-height:1.15;letter-spacing:-.02em;margin-bottom:1rem;}
+.hero h1 span{color:var(--warn);}
+.hero p{color:var(--muted);max-width:560px;margin-bottom:1.5rem;}
+.pill-row{display:flex;gap:.5rem;flex-wrap:wrap;}
+.pill{font-family:var(--mono);font-size:.68rem;padding:.25rem .7rem;border-radius:2rem;border:1px solid var(--border);color:var(--muted);}
+.pill.red{border-color:var(--warn);color:var(--warn);}
+.pill.green{border-color:var(--green);color:var(--green);}
+section{max-width:900px;margin:0 auto;padding:3rem 2rem;border-top:1px solid var(--border);}
+.sec-label{font-family:var(--mono);font-size:.65rem;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:.5rem;}
+h2{font-size:1.6rem;font-weight:600;margin-bottom:.8rem;letter-spacing:-.01em;}
+h2 span{color:var(--warn);}
+h3{font-size:.95rem;font-weight:600;margin:1.5rem 0 .5rem;color:var(--warn);font-family:var(--mono);}
+p{color:var(--muted);margin-bottom:.8rem;}
+strong{color:var(--text);font-weight:600;}
+code{font-family:var(--mono);font-size:.8rem;color:var(--warn);background:var(--surface);padding:.1rem .4rem;border-radius:3px;}
+.callout{background:var(--surface);border-left:3px solid var(--blue);border-radius:0 6px 6px 0;padding:.9rem 1.1rem;margin:1rem 0;font-size:.88rem;color:var(--text);}
+.callout.green{border-left-color:var(--green);}
+.callout.warn{border-left-color:var(--warn);}
+.callout.amber{border-left-color:var(--amber);}
+.callout.purple{border-left-color:var(--purple);}
+.tbl-wrap{overflow-x:auto;margin:1rem 0;}
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.78rem;}
+th{background:var(--surface2);color:var(--muted);padding:.45rem .8rem;border:1px solid var(--border);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;text-align:left;}
+td{padding:.4rem .8rem;border:1px solid var(--border);color:var(--text);}
+tr:nth-child(even) td{background:rgba(255,255,255,.02);}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0;}
+@media(max-width:600px){.grid2{grid-template-columns:1fr;}}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin:1rem 0;}
+@media(max-width:700px){.grid3{grid-template-columns:1fr;}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.1rem;}
+.card.hl{border-color:var(--warn);}
+.card-title{font-family:var(--mono);font-size:.82rem;font-weight:600;color:var(--warn);margin-bottom:.5rem;}
+.tag{font-family:var(--mono);font-size:.65rem;padding:.15rem .5rem;border-radius:3px;display:inline-block;margin:.15rem .1rem;}
+.tag.good{background:rgba(63,185,80,.12);color:var(--green);}
+.tag.bad{background:rgba(247,129,102,.12);color:var(--warn);}
+.tag.neutral{background:rgba(88,166,255,.1);color:var(--blue);}
+pre{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1rem 1.2rem;font-family:var(--mono);font-size:.78rem;overflow-x:auto;margin:.8rem 0;line-height:1.6;}
+.kw{color:#ff7b72;}.fn{color:#d2a8ff;}.str{color:#a5d6ff;}.cm{color:#8b949e;font-style:italic;}
+
+/* WINDOW VIZ */
+.window-viz{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:1.2rem 0;}
+.wv-header{background:var(--surface2);border-bottom:1px solid var(--border);padding:.6rem 1rem;font-family:var(--mono);font-size:.72rem;color:var(--muted);display:flex;justify-content:space-between;align-items:center;}
+.wv-body{padding:1.2rem;overflow-x:auto;}
+.wv-timeline{position:relative;height:60px;min-width:600px;}
+.wv-axis{position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--border);}
+.wv-event{position:absolute;bottom:8px;width:12px;height:12px;border-radius:50%;transform:translateX(-6px);}
+.wv-window{position:absolute;bottom:4px;height:20px;border-radius:3px;opacity:.3;}
+.wv-window-label{position:absolute;bottom:28px;font-family:var(--mono);font-size:.65rem;text-align:center;}
+.wv-tick{position:absolute;bottom:-16px;font-family:var(--mono);font-size:.62rem;color:var(--muted);transform:translateX(-50%);}
+
+/* TAB */
+.tab-bar{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:1rem;overflow-x:auto;}
+.tab-btn{font-family:var(--mono);font-size:.76rem;padding:.55rem 1rem;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .2s;}
+.tab-btn.active{color:var(--warn);border-bottom-color:var(--warn);}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+
+/* KAFKA DIAGRAM */
+.kafka-diagram{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:1rem 0;}
+.kd-header{background:var(--surface2);border-bottom:1px solid var(--border);padding:.6rem 1rem;font-family:var(--mono);font-size:.7rem;color:var(--muted);}
+.kd-body{padding:1.2rem;overflow-x:auto;}
+.kd-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem;min-width:560px;}
+.kd-label{font-family:var(--mono);font-size:.7rem;color:var(--muted);width:90px;flex-shrink:0;}
+.kd-part{display:flex;gap:.3rem;}
+.kd-box{font-family:var(--mono);font-size:.68rem;padding:.3rem .5rem;border-radius:4px;border:1px solid var(--border);text-align:center;white-space:nowrap;}
+
+/* DELIVERY QUIZ */
+.delivery-quiz{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:1rem 0;}
+.dq-header{background:var(--surface2);border-bottom:1px solid var(--border);padding:.7rem 1rem;font-family:var(--mono);font-size:.72rem;color:var(--muted);}
+.dq-body{padding:1.2rem;}
+.dq-scenario{background:var(--surface2);border:1px solid var(--amber);border-radius:6px;padding:.8rem 1rem;margin-bottom:.8rem;font-size:.85rem;}
+.dq-label{font-family:var(--mono);font-size:.62rem;color:var(--amber);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.3rem;}
+.dq-opts{display:flex;flex-direction:column;gap:.4rem;margin-bottom:.8rem;}
+.dq-opt{background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:.5rem .9rem;font-family:var(--mono);font-size:.78rem;color:var(--text);cursor:pointer;text-align:left;transition:all .2s;}
+.dq-opt:hover{border-color:var(--amber);}
+.dq-opt.correct{border-color:var(--green);background:rgba(63,185,80,.08);color:var(--green);}
+.dq-opt.wrong{border-color:var(--warn);background:rgba(247,129,102,.08);color:var(--warn);}
+.dq-feedback{font-size:.82rem;padding:.7rem .9rem;border-radius:5px;display:none;margin-bottom:.6rem;}
+.dq-next{font-family:var(--mono);font-size:.73rem;padding:.38rem .9rem;background:var(--warn);color:#0d1117;border:none;border-radius:4px;cursor:pointer;font-weight:600;display:none;}
+
+#tip{position:fixed;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.5rem .8rem;font-family:var(--mono);font-size:.73rem;color:var(--text);pointer-events:none;display:none;z-index:999;max-width:240px;line-height:1.5;}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;font-family:var(--mono);font-size:.72rem;color:var(--muted);}
+footer a{color:var(--blue);text-decoration:none;}
+</style>
+</head>
+<body>
+<div id="tip"></div>
+
+<nav>
+  <a href="#" class="nav-brand">DE Guide</a>
+  <a href="data_architure.html">← Architecture</a>
+  <a href="#why">Why Streaming</a>
+  <a href="#kafka">Kafka Internals</a>
+  <a href="#delivery">Delivery Semantics</a>
+  <a href="#windowing">Windowing</a>
+  <a href="#watermarks">Watermarks</a>
+  <a href="#state">State Management</a>
+  <a href="#flink">Flink vs Spark</a>
+  <a href="#eventdriven">Event-Driven</a>
+  <a href="#interviews">Interviews</a>
+</nav>
+
+<div class="hero">
+  <div class="hero-tag">Data Engineering · Streaming Internals</div>
+  <h1>Streaming <span>Deep Dive</span></h1>
+  <p>Kafka internals, windowing, watermarks, exactly-once semantics, state management, and event-driven architecture — everything the architecture page mentioned but didn't teach.</p>
+  <div class="pill-row">
+    <span class="pill red">Kafka internals</span>
+    <span class="pill red">Windowing</span>
+    <span class="pill red">Exactly-once</span>
+    <span class="pill green">Interactive windows</span>
+    <span class="pill green">Delivery quiz</span>
+  </div>
+</div>
+
+<!-- ─── WHY STREAMING IS HARD ─── -->
+<section id="why">
+  <div class="sec-label">Section 01</div>
+  <h2>Why Streaming is <span>10x Harder</span></h2>
+  <p>Batch processing has a simple mental model: data is finite, you process it, you're done. Streaming breaks every one of those assumptions.</p>
+
+  <div class="grid3">
+    <div class="card hl">
+      <div class="card-title">Data is infinite</div>
+      <p style="font-size:.82rem;">A streaming pipeline never "finishes". Events keep arriving. You must process them in bounded windows — otherwise you can never produce an output.</p>
+    </div>
+    <div class="card hl">
+      <div class="card-title">Events arrive out of order</div>
+      <p style="font-size:.82rem;">A mobile event created at 10:00am might arrive at your pipeline at 10:45am due to network issues. How do you aggregate "events from 10am–11am" when some arrive late?</p>
+    </div>
+    <div class="card hl">
+      <div class="card-title">Failures must be handled exactly</div>
+      <p style="font-size:.82rem;">If your pipeline crashes and restarts mid-stream, does every event get processed exactly once? Or might some be skipped (at-most-once) or duplicated (at-least-once)?</p>
+    </div>
+  </div>
+
+  <div class="tbl-wrap" style="margin-top:1.2rem;"><table>
+    <thead><tr><th>Problem</th><th>Batch solution</th><th>Streaming solution</th><th>Why it's harder in streaming</th></tr></thead>
+    <tbody>
+      <tr><td>Process bounded data</td><td>Read the whole file/table</td><td>Windows — tumbling, sliding, session</td><td>You must choose a window strategy and live with its trade-offs</td></tr>
+      <tr><td>Handle out-of-order data</td><td>Sort the file first</td><td>Watermarks + grace periods</td><td>You must decide when to "close" a window and emit results</td></tr>
+      <tr><td>Fault tolerance</td><td>Re-run the job from start</td><td>Checkpointing + idempotent writes</td><td>Must checkpoint state continuously without impacting throughput</td></tr>
+      <tr><td>Join two datasets</td><td>JOIN in SQL — trivial</td><td>Stream-stream join with time bounds</td><td>Both streams are infinite — you need a time window to bound the join</td></tr>
+      <tr><td>Aggregations</td><td>GROUP BY — trivial</td><td>Stateful aggregation per window</td><td>State must be stored in a state backend (RocksDB) and checkpointed</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout warn">⚠ <strong>The rule:</strong> Only use true streaming when sub-minute latency is a hard, non-negotiable business requirement. For everything else — fraud detection, live inventory, real-time alerts — streaming is justified. For "near real-time dashboards", micro-batch (5-15 min) is almost always the right answer and 10x simpler to operate.</div>
+</section>
+
+<!-- ─── KAFKA INTERNALS ─── -->
+<section id="kafka">
+  <div class="sec-label">Section 02</div>
+  <h2>Kafka <span>Internals</span></h2>
+  <p>Kafka is the most widely used event streaming platform. Understanding its internals — topics, partitions, offsets, consumer groups — is essential for building and debugging streaming pipelines.</p>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="stab('kafka','anatomy',this)">Anatomy</button>
+    <button class="tab-btn" onclick="stab('kafka','partitions',this)">Partitions</button>
+    <button class="tab-btn" onclick="stab('kafka','consumers',this)">Consumer Groups</button>
+    <button class="tab-btn" onclick="stab('kafka','retention',this)">Retention</button>
+  </div>
+
+  <div id="kafka-anatomy" class="tab-pane active">
+    <p>Kafka organises messages into <strong>topics</strong>. Each topic is split into <strong>partitions</strong>. Each message has an <strong>offset</strong> — a sequential ID within its partition. This is how Kafka tracks what has been consumed.</p>
+    <div class="kafka-diagram">
+      <div class="kd-header">Topic: user_events — 3 partitions</div>
+      <div class="kd-body">
+        <div class="kd-row">
+          <div class="kd-label">Partition 0</div>
+          <div class="kd-part">
+            <div class="kd-box" style="border-color:var(--warn);color:var(--warn);">offset 0<br>click</div>
+            <div class="kd-box" style="border-color:var(--warn);color:var(--warn);">offset 1<br>purchase</div>
+            <div class="kd-box" style="border-color:var(--warn);color:var(--warn);">offset 2<br>click</div>
+            <div class="kd-box" style="border-color:var(--green);color:var(--green);">offset 3<br>login</div>
+            <div class="kd-box" style="border-color:var(--green);color:var(--green);">offset 4<br>click</div>
+          </div>
+        </div>
+        <div class="kd-row">
+          <div class="kd-label">Partition 1</div>
+          <div class="kd-part">
+            <div class="kd-box" style="border-color:var(--warn);color:var(--warn);">offset 0<br>logout</div>
+            <div class="kd-box" style="border-color:var(--warn);color:var(--warn);">offset 1<br>click</div>
+            <div class="kd-box" style="border-color:var(--green);color:var(--green);">offset 2<br>search</div>
+            <div class="kd-box" style="border-color:var(--green);color:var(--green);">offset 3<br>click</div>
+          </div>
+        </div>
+        <div class="kd-row">
+          <div class="kd-label">Partition 2</div>
+          <div class="kd-part">
+            <div class="kd-box" style="border-color:var(--warn);color:var(--warn);">offset 0<br>purchase</div>
+            <div class="kd-box" style="border-color:var(--green);color:var(--green);">offset 1<br>refund</div>
+            <div class="kd-box" style="border-color:var(--green);color:var(--green);">offset 2<br>click</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:1rem;margin-top:.8rem;font-family:var(--mono);font-size:.68rem;">
+          <span style="color:var(--warn);">■ consumed (committed offset)</span>
+          <span style="color:var(--green);">■ unconsumed</span>
+        </div>
+      </div>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Concept</th><th>What it is</th><th>Key point</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Topic</strong></td><td>Named stream of records — like a database table for events</td><td>Producers write to a topic. Consumers read from a topic.</td></tr>
+        <tr><td><strong>Partition</strong></td><td>Ordered, immutable log of messages within a topic</td><td>Parallelism unit — more partitions = more consumers can read in parallel</td></tr>
+        <tr><td><strong>Offset</strong></td><td>Sequential integer ID of each message within a partition</td><td>Consumers track their position by offset. Reset offset to replay.</td></tr>
+        <tr><td><strong>Broker</strong></td><td>A single Kafka server that stores partitions</td><td>A cluster has multiple brokers for replication and fault tolerance</td></tr>
+        <tr><td><strong>Replication factor</strong></td><td>How many broker copies of each partition exist</td><td>RF=3 means 3 copies — lose 2 brokers and data survives</td></tr>
+        <tr><td><strong>Leader / Follower</strong></td><td>One partition replica is the leader (writes). Others are followers (replicas).</td><td>If leader fails, a follower is elected leader automatically</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div id="kafka-partitions" class="tab-pane">
+    <p><strong>Partitions are the key to Kafka's scalability.</strong> A topic with N partitions can be consumed by up to N consumers in parallel — each consumer owns one or more partitions.</p>
+    <div class="callout amber">⚡ <strong>Partition key determines routing.</strong> When a producer sends a message with a key (e.g. user_id), Kafka hashes the key to choose the partition. Same key always goes to the same partition — guaranteeing order for that key.</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Decision</th><th>Impact</th><th>Rule of thumb</th></tr></thead>
+      <tbody>
+        <tr><td>Number of partitions</td><td>Max parallelism = max consumers. More partitions = more overhead on broker.</td><td>Start with 6-12 partitions per topic. Scale up if consumer lag grows.</td></tr>
+        <tr><td>Partition key choice</td><td>Determines which partition a message lands on. Same key = same partition = ordered.</td><td>Use the entity key (user_id, order_id). Never use a random key if order matters.</td></tr>
+        <tr><td>No partition key (null)</td><td>Messages are distributed round-robin across partitions. No ordering guarantee.</td><td>Use when order doesn't matter and you want maximum throughput.</td></tr>
+        <tr><td>Hot partitions</td><td>One key generates 90% of traffic — that partition's consumer is overwhelmed.</td><td>Add a salt suffix to the key (user_id + random 0-9) to spread load. Lose strict ordering.</td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout warn">⚠ <strong>You cannot reduce the number of partitions</strong> without deleting and recreating the topic. Over-partition rather than under-partition — it's easier to add consumers than to repartition.</div>
+  </div>
+
+  <div id="kafka-consumers" class="tab-pane">
+    <p>A <strong>consumer group</strong> is a set of consumers that together consume all partitions of a topic. Each partition is assigned to exactly one consumer in the group at a time — guaranteeing that each message is processed by exactly one consumer in the group.</p>
+    <div class="grid2">
+      <div class="card hl">
+        <div class="card-title">Scaling with consumer groups</div>
+        <p style="font-size:.82rem;">3 partitions + 3 consumers in group = each consumer reads 1 partition. Adding a 4th consumer? It sits idle — more consumers than partitions is wasteful. <strong>Max parallelism = number of partitions.</strong></p>
+      </div>
+      <div class="card hl">
+        <div class="card-title">Multiple consumer groups</div>
+        <p style="font-size:.82rem;">Two separate services can each have their own consumer group on the same topic. Each group tracks its own offsets independently. Analytics pipeline and fraud detection service both read the same topic — completely independently.</p>
+      </div>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Scenario</th><th>What happens</th></tr></thead>
+      <tbody>
+        <tr><td>Consumer crashes</td><td>Kafka detects via heartbeat timeout. Triggers rebalance — partitions redistributed to remaining consumers in group.</td></tr>
+        <tr><td>Consumer added</td><td>Rebalance triggered. Partitions redistributed to include new consumer. Brief pause in processing during rebalance.</td></tr>
+        <tr><td>Consumer lags behind</td><td>Consumer offset falls behind the producer. If lag grows past retention period, messages are lost.</td></tr>
+        <tr><td>Reset to earliest offset</td><td>Consumer group replays all messages from the beginning of the topic — up to retention limit.</td></tr>
+        <tr><td>Commit offset manually</td><td>Consumer marks a specific offset as "processed". On restart, resumes from that offset.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div id="kafka-retention" class="tab-pane">
+    <p>Kafka is <strong>not a message queue that deletes messages after consumption</strong>. Messages are retained for a configurable period — regardless of whether they've been consumed. This enables multiple consumers and replay.</p>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Retention policy</th><th>How it works</th><th>Use case</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Time-based</strong> (default)</td><td>Delete messages older than N days (default: 7 days)</td><td>Most streaming pipelines — keep last week for replay</td></tr>
+        <tr><td><strong>Size-based</strong></td><td>Delete oldest messages when topic exceeds N GB</td><td>High-volume topics where time-based retention would be too large</td></tr>
+        <tr><td><strong>Log compaction</strong></td><td>Keep only the latest message per key — older versions of same key are deleted</td><td>Database changelog topics — only need latest state per entity</td></tr>
+        <tr><td><strong>Infinite retention</strong></td><td>Never delete. Topic grows forever.</td><td>Kappa architecture event log — replay entire history</td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout green">✓ <strong>Kappa architecture relies on long retention.</strong> If you set Kafka retention to 90 days, you can always replay 90 days of history — this replaces the batch layer. The trade-off is storage cost scales with retention × event volume.</div>
+  </div>
+</section>
+
+<!-- ─── DELIVERY SEMANTICS ─── -->
+<section id="delivery">
+  <div class="sec-label">Section 03</div>
+  <h2>Delivery <span>Semantics</span></h2>
+  <p>One of the most important and most misunderstood concepts in streaming. The delivery guarantee determines what happens when failures occur — and every streaming system makes a trade-off between correctness and performance.</p>
+
+  <div class="grid3">
+    <div class="card">
+      <div class="card-title" style="color:var(--silver);">At-most-once</div>
+      <p style="font-size:.82rem;">Messages are delivered <strong>zero or one times</strong>. If the consumer crashes after receiving but before processing, the message is lost — the offset was already committed.</p>
+      <div style="margin:.6rem 0;font-family:var(--mono);font-size:.75rem;color:var(--muted);">commit offset → process message</div>
+      <span class="tag good">Highest throughput</span>
+      <span class="tag bad">Data loss possible</span>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.6rem;">Use for: metrics, analytics where occasional loss is acceptable. Never for payments or fraud.</p>
+    </div>
+    <div class="card hl">
+      <div class="card-title" style="color:var(--amber);">At-least-once</div>
+      <p style="font-size:.82rem;">Messages are delivered <strong>one or more times</strong>. If the consumer crashes after processing but before committing the offset, the message is redelivered on restart — causing a duplicate.</p>
+      <div style="margin:.6rem 0;font-family:var(--mono);font-size:.75rem;color:var(--muted);">process message → commit offset</div>
+      <span class="tag good">No data loss</span>
+      <span class="tag bad">Duplicates possible</span>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.6rem;">Use for: most pipelines. Handle duplicates downstream with deduplication logic.</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--green);">Exactly-once</div>
+      <p style="font-size:.82rem;">Messages are delivered <strong>exactly one time</strong>. No loss. No duplicates. Achieved through idempotent producers + transactional APIs + atomic offset commit + write in the same transaction.</p>
+      <div style="margin:.6rem 0;font-family:var(--mono);font-size:.75rem;color:var(--muted);">atomic: process + commit offset</div>
+      <span class="tag good">No loss, no duplicates</span>
+      <span class="tag bad">Lower throughput</span>
+      <span class="tag bad">Complex setup</span>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.6rem;">Use for: financial transactions, fraud detection, any pipeline where duplicates cause business impact.</p>
+    </div>
+  </div>
+
+  <h3>// How exactly-once actually works</h3>
+  <p>Exactly-once is not magic — it requires three components working together:</p>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Component</th><th>What it does</th><th>How</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Idempotent producer</strong></td><td>Ensures a message is written to Kafka exactly once even if the producer retries</td><td>Each message has a producer ID + sequence number. Kafka broker deduplicates retries.</td></tr>
+      <tr><td><strong>Transactional producer</strong></td><td>Writes to multiple partitions and topics atomically — all succeed or all fail</td><td>Producer begins transaction, writes messages, commits. Consumers see all or nothing.</td></tr>
+      <tr><td><strong>read_committed consumer</strong></td><td>Consumers only see messages from committed transactions</td><td>Set <code>isolation.level=read_committed</code>. Uncommitted messages are invisible.</td></tr>
+    </tbody>
+  </table></div>
+  <pre><span class="cm">// Exactly-once producer setup (Java)</span>
+<span class="fn">props</span>.put(<span class="str">"enable.idempotence"</span>, <span class="str">"true"</span>);
+<span class="fn">props</span>.put(<span class="str">"transactional.id"</span>, <span class="str">"my-transactional-id"</span>);
+<span class="fn">props</span>.put(<span class="str">"acks"</span>, <span class="str">"all"</span>);  <span class="cm">// wait for all replicas</span>
+
+producer.<span class="fn">initTransactions</span>();
+producer.<span class="fn">beginTransaction</span>();
+producer.<span class="fn">send</span>(<span class="kw">new</span> ProducerRecord(<span class="str">"topic"</span>, key, value));
+producer.<span class="fn">sendOffsetsToTransaction</span>(offsets, groupMetadata);
+producer.<span class="fn">commitTransaction</span>();  <span class="cm">// atomic: message + offset commit</span></pre>
+
+  <h3>// Interactive — which delivery guarantee would you use?</h3>
+  <div class="delivery-quiz" id="dq-wrap">
+    <div class="dq-header">Scenario quiz — pick the right delivery guarantee</div>
+    <div class="dq-body" id="dq-body"></div>
+  </div>
+</section>
+
+<!-- ─── WINDOWING ─── -->
+<section id="windowing">
+  <div class="sec-label">Section 04</div>
+  <h2><span>Windowing</span></h2>
+  <p>Windows turn an infinite stream into finite, bounded sets of events that can be aggregated. The window strategy you choose determines what questions you can answer and what trade-offs you accept.</p>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="stab('win','tumbling',this)">Tumbling</button>
+    <button class="tab-btn" onclick="stab('win','sliding',this)">Sliding</button>
+    <button class="tab-btn" onclick="stab('win','session',this)">Session</button>
+    <button class="tab-btn" onclick="stab('win','global',this)">Global</button>
+  </div>
+
+  <div id="win-tumbling" class="tab-pane active">
+    <p><strong>Tumbling windows</strong> are fixed-size, non-overlapping windows. Every event belongs to exactly one window. The simplest window type.</p>
+    <div class="window-viz">
+      <div class="wv-header"><span>Tumbling window — 10 min size</span></div>
+      <div class="wv-body">
+        <div class="wv-timeline" id="viz-tumbling"></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="card-title">When to use</div><p style="font-size:.82rem;">Hourly sales totals. Daily active users. Per-minute request counts. Any "how many X in this time period" question where periods don't overlap.</p></div>
+      <div class="card"><div class="card-title">Trade-off</div><p style="font-size:.82rem;">An event at 10:59 and an event at 11:01 are in different windows — even though they're 2 minutes apart. Edge events near window boundaries can appear artificially separated.</p></div>
+    </div>
+    <pre><span class="cm">-- Flink SQL: tumbling window</span>
+<span class="kw">SELECT</span>
+  user_id,
+  <span class="fn">TUMBLE_START</span>(event_time, <span class="fn">INTERVAL</span> <span class="str">'10'</span> MINUTE) <span class="kw">AS</span> window_start,
+  <span class="fn">COUNT</span>(*) <span class="kw">AS</span> event_count
+<span class="kw">FROM</span> user_events
+<span class="fn">GROUP BY</span>
+  user_id,
+  <span class="fn">TUMBLE</span>(event_time, <span class="fn">INTERVAL</span> <span class="str">'10'</span> MINUTE)</pre>
+  </div>
+
+  <div id="win-sliding" class="tab-pane">
+    <p><strong>Sliding windows</strong> have a fixed size but move by a slide interval. Windows overlap — an event can appear in multiple windows. Gives a rolling/moving average effect.</p>
+    <div class="window-viz">
+      <div class="wv-header"><span>Sliding window — 10 min size, 5 min slide</span></div>
+      <div class="wv-body">
+        <div class="wv-timeline" id="viz-sliding"></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="card-title">When to use</div><p style="font-size:.82rem;">Rolling 5-minute fraud score. Moving average error rate. "How many requests in the last 10 minutes?" updated every 5 minutes. Any rolling metric.</p></div>
+      <div class="card"><div class="card-title">Trade-off</div><p style="font-size:.82rem;">Events are processed multiple times (once per window they appear in). More compute than tumbling. If slide &lt; size, windows overlap. If slide = size, it degenerates to tumbling.</p></div>
+    </div>
+    <pre><span class="cm">-- Flink SQL: sliding window (HOP)</span>
+<span class="kw">SELECT</span>
+  user_id,
+  <span class="fn">HOP_START</span>(event_time, <span class="fn">INTERVAL</span> <span class="str">'5'</span> MINUTE, <span class="fn">INTERVAL</span> <span class="str">'10'</span> MINUTE),
+  <span class="fn">COUNT</span>(*) <span class="kw">AS</span> event_count
+<span class="kw">FROM</span> user_events
+<span class="fn">GROUP BY</span>
+  user_id,
+  <span class="fn">HOP</span>(event_time, <span class="fn">INTERVAL</span> <span class="str">'5'</span> MINUTE, <span class="fn">INTERVAL</span> <span class="str">'10'</span> MINUTE)</pre>
+  </div>
+
+  <div id="win-session" class="tab-pane">
+    <p><strong>Session windows</strong> are dynamic-size windows that close after a gap of inactivity. No fixed size — the window grows as long as events keep arriving within the gap timeout.</p>
+    <div class="window-viz">
+      <div class="wv-header"><span>Session window — 5 min inactivity gap</span></div>
+      <div class="wv-body">
+        <div class="wv-timeline" id="viz-session"></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="card-title">When to use</div><p style="font-size:.82rem;">User session analysis — group all user activity until 30 min of inactivity. Shopping cart events. Support ticket interactions. Any "burst of activity" pattern.</p></div>
+      <div class="card"><div class="card-title">Trade-off</div><p style="font-size:.82rem;">Sessions are per-key (per user). The system must maintain state for every active user — memory grows with number of active sessions. Must choose gap duration carefully.</p></div>
+    </div>
+    <pre><span class="cm">-- Flink SQL: session window</span>
+<span class="kw">SELECT</span>
+  user_id,
+  <span class="fn">SESSION_START</span>(event_time, <span class="fn">INTERVAL</span> <span class="str">'5'</span> MINUTE) <span class="kw">AS</span> session_start,
+  <span class="fn">SESSION_END</span>(event_time, <span class="fn">INTERVAL</span> <span class="str">'5'</span> MINUTE) <span class="kw">AS</span> session_end,
+  <span class="fn">COUNT</span>(*) <span class="kw">AS</span> events_in_session
+<span class="kw">FROM</span> user_events
+<span class="fn">GROUP BY</span>
+  user_id,
+  <span class="fn">SESSION</span>(event_time, <span class="fn">INTERVAL</span> <span class="str">'5'</span> MINUTE)</pre>
+  </div>
+
+  <div id="win-global" class="tab-pane">
+    <p><strong>Global windows</strong> put all events into one infinite window. Useless without a custom trigger — the window never closes on its own, so you must define when to emit results.</p>
+    <div class="grid2">
+      <div class="card"><div class="card-title">When to use</div><p style="font-size:.82rem;">When you want to maintain running totals (all-time count, all-time sum) that update on every event. Requires a custom trigger to define when to emit.</p></div>
+      <div class="card"><div class="card-title">Trade-off</div><p style="font-size:.82rem;">State grows unboundedly — every event since the beginning of time is in one window. Requires careful state management and periodic state cleanup. Rarely the right choice.</p></div>
+    </div>
+  </div>
+
+  <div class="tbl-wrap" style="margin-top:1rem;"><table>
+    <thead><tr><th>Window type</th><th>Size</th><th>Overlap</th><th>Triggered by</th><th>Best for</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Tumbling</strong></td><td>Fixed</td><td>No</td><td>Time</td><td>Periodic aggregations — hourly totals, daily counts</td></tr>
+      <tr><td><strong>Sliding</strong></td><td>Fixed</td><td>Yes</td><td>Time</td><td>Rolling metrics — moving averages, rolling fraud scores</td></tr>
+      <tr><td><strong>Session</strong></td><td>Dynamic</td><td>No (per key)</td><td>Inactivity gap</td><td>User sessions, interaction bursts</td></tr>
+      <tr><td><strong>Global</strong></td><td>Infinite</td><td>N/A</td><td>Custom trigger</td><td>Running totals — rarely needed</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ─── WATERMARKS ─── -->
+<section id="watermarks">
+  <div class="sec-label">Section 05</div>
+  <h2><span>Watermarks</span> & Late Data</h2>
+  <p>Watermarks solve the out-of-order event problem. They tell the stream processor: "I believe all events up to time T have arrived. It is safe to close windows up to T and emit results."</p>
+
+  <div class="callout amber">⚡ <strong>Event time vs processing time.</strong> Event time = when the event actually happened (the timestamp in the event). Processing time = when the event arrived at the processor. These are different — a mobile event at 10:00am might arrive at 10:45am. Always use <strong>event time</strong> for accurate analytics.</div>
+
+  <h3>// How watermarks work</h3>
+  <div class="grid2">
+    <div class="card hl">
+      <div class="card-title">Without watermarks</div>
+      <p style="font-size:.82rem;">You'd have to wait forever for late events before closing a window. A 10:00–11:00am tumbling window could never emit results because a late event from 10:30am might arrive at any time.</p>
+    </div>
+    <div class="card hl">
+      <div class="card-title">With watermarks</div>
+      <p style="font-size:.82rem;">A watermark of "max event time seen − 5 minutes" says: if the latest event I've seen is at 11:05am, I assume all events up to 11:00am have arrived. The 10:00–11:00 window can now close and emit.</p>
+    </div>
+  </div>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Watermark strategy</th><th>How</th><th>Trade-off</th><th>Use when</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Bounded out-of-orderness</strong></td><td>Watermark = max_event_time − N minutes</td><td>Higher N = more late data captured, higher latency</td><td>Mobile events, IoT sensors — known max lateness</td></tr>
+      <tr><td><strong>Monotonically increasing</strong></td><td>Watermark = max_event_time (no delay)</td><td>Any late event is dropped immediately</td><td>Events guaranteed to arrive in order (rare)</td></tr>
+      <tr><td><strong>Custom watermark</strong></td><td>Business logic determines watermark per partition</td><td>Complex to implement</td><td>Heterogeneous sources with different latency profiles</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>// Late events — what happens when they arrive after the window closed?</h3>
+  <div class="grid3">
+    <div class="card">
+      <div class="card-title" style="color:var(--warn);">Drop</div>
+      <p style="font-size:.82rem;">Late events are silently discarded. Simplest option. Acceptable when occasional late data doesn't affect business decisions.</p>
+      <span class="tag good">Simplest</span><span class="tag bad">Data loss</span>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--amber);">Side output</div>
+      <p style="font-size:.82rem;">Late events are routed to a separate "late data" stream. Can be inspected, reprocessed, or used to trigger window updates. Best for audit purposes.</p>
+      <span class="tag good">No data loss</span><span class="tag neutral">Extra stream to manage</span>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--green);">Allowed lateness</div>
+      <p style="font-size:.82rem;">Keep the window open for an extra N minutes after the watermark passes. Late events within this period update the result and emit a new (corrected) output. Flink supports this natively.</p>
+      <span class="tag good">Most accurate</span><span class="tag bad">Downstream must handle updates</span>
+    </div>
+  </div>
+</section>
+
+<!-- ─── STATE MANAGEMENT ─── -->
+<section id="state">
+  <div class="sec-label">Section 06</div>
+  <h2>State <span>Management</span></h2>
+  <p>Stateful stream processing means the processor remembers things across events — running counts, partial aggregations, join buffers, session windows. This state must be stored, managed, and checkpointed.</p>
+
+  <h3>// Types of state</h3>
+  <div class="grid2">
+    <div class="card hl">
+      <div class="card-title">Keyed state</div>
+      <p style="font-size:.82rem;">State scoped to a specific key (e.g. user_id). Each key has its own isolated state. A running count of events per user — user_id=123 has its own counter, independent of user_id=456.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Types: ValueState (single value), ListState, MapState, ReducingState, AggregatingState</p>
+    </div>
+    <div class="card hl">
+      <div class="card-title">Operator state</div>
+      <p style="font-size:.82rem;">State scoped to an operator instance — not to a key. Used for things like Kafka offset tracking, where one operator needs to remember all offsets it owns.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Less common. Mainly used in source and sink connectors.</p>
+    </div>
+  </div>
+
+  <h3>// State backends — where state is stored</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Backend</th><th>Where state lives</th><th>Performance</th><th>Use when</th></tr></thead>
+    <tbody>
+      <tr><td><strong>HashMapStateBackend</strong></td><td>JVM heap memory</td><td style="color:var(--green)">Fastest</td><td>Small state, development, testing</td></tr>
+      <tr><td><strong>EmbeddedRocksDBStateBackend</strong></td><td>Local RocksDB (on disk)</td><td style="color:var(--amber)">Slower reads (disk)</td><td>Large state that doesn't fit in memory. Production default for most jobs.</td></tr>
+      <tr><td><strong>Checkpoint to S3/GCS/ADLS</strong></td><td>Remote object store</td><td style="color:var(--warn)">Checkpoint cost only</td><td>Durability — state is checkpointed here for recovery, not queried from here</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>// Checkpointing — fault tolerance for stateful jobs</h3>
+  <p>Checkpointing is Flink/Spark's mechanism for fault tolerance. The processor periodically saves a snapshot of all state to durable storage. On failure, it restarts from the last checkpoint — not from the beginning.</p>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Property</th><th>What it means</th><th>Typical value</th></tr></thead>
+    <tbody>
+      <tr><td>Checkpoint interval</td><td>How often state is snapshotted to storage</td><td>Every 30 seconds to 5 minutes. More frequent = faster recovery, more overhead.</td></tr>
+      <tr><td>Checkpoint timeout</td><td>How long to wait before declaring a checkpoint failed</td><td>10 minutes. If checkpoint takes longer, fail and retry.</td></tr>
+      <tr><td>Min pause between checkpoints</td><td>Minimum time between end of one checkpoint and start of next</td><td>Prevents checkpoint overhead from dominating processing</td></tr>
+      <tr><td>Retained checkpoints</td><td>How many old checkpoints to keep</td><td>Keep last 2-3 — allows rollback if new version has bugs</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout green">✓ <strong>Checkpointing + idempotent sink = exactly-once.</strong> If the job restarts from a checkpoint and replays some events, idempotent writes to the sink ensure those re-processed events don't cause duplicates in the output.</div>
+</section>
+
+<!-- ─── FLINK vs SPARK ─── -->
+<section id="flink">
+  <div class="sec-label">Section 07</div>
+  <h2>Flink vs Spark <span>Streaming</span></h2>
+  <p>The two dominant stream processing engines. Both can do most streaming jobs — but they have fundamentally different designs.</p>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Dimension</th><th>Apache Flink</th><th>Spark Structured Streaming</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Processing model</strong></td><td>True event-by-event streaming (native)</td><td>Micro-batch by default (continuous mode is experimental)</td></tr>
+      <tr><td><strong>Latency</strong></td><td style="color:var(--green)">Milliseconds</td><td style="color:var(--amber)">Seconds (micro-batch interval)</td></tr>
+      <tr><td><strong>State management</strong></td><td style="color:var(--green)">Best-in-class. RocksDB, rich state APIs, queryable state</td><td style="color:var(--amber)">Simpler. Stateful ops available but less flexible</td></tr>
+      <tr><td><strong>Exactly-once</strong></td><td style="color:var(--green)">Yes — native with checkpointing</td><td style="color:var(--green)">Yes — with idempotent sinks</td></tr>
+      <tr><td><strong>Windowing</strong></td><td style="color:var(--green)">Tumbling, sliding, session, global — all native</td><td style="color:var(--amber)">Tumbling and sliding. Session windows less straightforward.</td></tr>
+      <tr><td><strong>Watermarks</strong></td><td style="color:var(--green)">Rich watermark API. Event time first-class.</td><td style="color:var(--amber)">Supported but less flexible</td></tr>
+      <tr><td><strong>SQL support</strong></td><td style="color:var(--green)">Flink SQL — production-ready streaming SQL</td><td style="color:var(--green)">Spark SQL — very mature, large ecosystem</td></tr>
+      <tr><td><strong>Batch + stream unified</strong></td><td style="color:var(--amber)">Possible but Spark is easier for batch</td><td style="color:var(--green)">Same API for batch and stream — easy to switch</td></tr>
+      <tr><td><strong>Ecosystem</strong></td><td style="color:var(--amber)">Smaller — fewer connectors, less tooling</td><td style="color:var(--green)">Huge — Delta Lake, dbt, Databricks, MLlib</td></tr>
+      <tr><td><strong>Learning curve</strong></td><td style="color:var(--warn)">Steep — streaming-first concepts upfront</td><td style="color:var(--green)">Easier if you know Spark batch</td></tr>
+      <tr><td><strong>Managed options</strong></td><td>Confluent, Kinesis Analytics, Ververica</td><td>Databricks, EMR, Dataproc</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="grid2" style="margin-top:1rem;">
+    <div class="card">
+      <div class="card-title" style="color:var(--warn);">Choose Flink when</div>
+      <p style="font-size:.82rem;">You need true millisecond latency. Complex stateful operations (joins across streams, pattern detection). Rich watermark control. Your primary workload is streaming — not batch.</p>
+      <span class="tag neutral">Fraud detection</span><span class="tag neutral">CEP patterns</span><span class="tag neutral">Real-time ML inference</span>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--green);">Choose Spark Streaming when</div>
+      <p style="font-size:.82rem;">Your team already knows Spark. You need the same code to run batch and stream. You use Databricks or Delta Lake. Micro-batch latency (seconds) is acceptable for your use case.</p>
+      <span class="tag neutral">Unified batch + stream</span><span class="tag neutral">Databricks shop</span><span class="tag neutral">Simpler ops</span>
+    </div>
+  </div>
+</section>
+
+<!-- ─── EVENT-DRIVEN ARCHITECTURE ─── -->
+<section id="eventdriven">
+  <div class="sec-label">Section 08</div>
+  <h2>Event-Driven <span>Architecture</span></h2>
+  <p>Event-driven architecture (EDA) is a design pattern where components communicate by producing and consuming events — rather than calling each other directly. Kafka is the most common event bus.</p>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="stab('eda','pubsub',this)">Pub/Sub</button>
+    <button class="tab-btn" onclick="stab('eda','eventsourcing',this)">Event Sourcing</button>
+    <button class="tab-btn" onclick="stab('eda','cqrs',this)">CQRS</button>
+    <button class="tab-btn" onclick="stab('eda','vs',this)">EDA vs REST</button>
+  </div>
+
+  <div id="eda-pubsub" class="tab-pane active">
+    <p><strong>Publish/Subscribe</strong> — producers publish events to a topic without knowing who will consume them. Consumers subscribe to topics independently. Decouples producers from consumers completely.</p>
+    <div class="grid2">
+      <div class="card hl">
+        <div class="card-title">Benefits</div>
+        <p style="font-size:.82rem;">Producers and consumers are completely decoupled — adding a new consumer (e.g. fraud detection) requires zero changes to the producer. Scale consumers independently. Consumers can replay events from any point.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Challenges</div>
+        <p style="font-size:.82rem;">No direct response — you can't "ask" for a result. Debugging is harder — trace an event across multiple consumers. Schema changes in events can break consumers silently. Need a schema registry.</p>
+      </div>
+    </div>
+    <div class="callout green">✓ <strong>Real example:</strong> Order placed event → consumed by (1) inventory service, (2) notification service, (3) analytics pipeline, (4) fraud detection service. All independently. Producer (checkout service) knows nothing about any of them.</div>
+  </div>
+
+  <div id="eda-eventsourcing" class="tab-pane">
+    <p><strong>Event Sourcing</strong> — instead of storing current state in a database, store the <strong>sequence of events that produced the state</strong>. The current state is derived by replaying all events from the beginning.</p>
+    <div class="grid2">
+      <div class="card hl">
+        <div class="card-title">Traditional approach</div>
+        <p style="font-size:.82rem;">Store current account balance. UPDATE accounts SET balance = 500 WHERE id = 123. History is lost — you only know the current value, not how it got there.</p>
+      </div>
+      <div class="card hl">
+        <div class="card-title">Event Sourcing approach</div>
+        <p style="font-size:.82rem;">Store every event: AccountOpened(£0), MoneyDeposited(£1000), MoneyWithdrawn(£500). Current balance = replay all events = £500. Complete audit trail. Can reconstruct any past state.</p>
+      </div>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Pros</th><th>Cons</th></tr></thead>
+      <tbody>
+        <tr><td>Complete audit trail — every state change recorded</td><td>Replaying events gets slow as history grows</td></tr>
+        <tr><td>Can reconstruct state at any point in time</td><td>Snapshots needed for performance at scale</td></tr>
+        <tr><td>Natural fit with event-driven systems and Kafka</td><td>Complex to implement correctly — eventual consistency challenges</td></tr>
+        <tr><td>Easy to add new projections/views of the same data</td><td>Schema evolution of past events is hard</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div id="eda-cqrs" class="tab-pane">
+    <p><strong>CQRS — Command Query Responsibility Segregation</strong> — separate the write model (commands that change state) from the read model (queries that return data). Often used together with Event Sourcing.</p>
+    <div class="grid2">
+      <div class="card hl">
+        <div class="card-title">Write side (Command)</div>
+        <p style="font-size:.82rem;">Receives commands (PlaceOrder, CancelOrder). Validates business rules. Emits events to the event log. Optimised for writes — normalised, consistent, transactional.</p>
+      </div>
+      <div class="card hl">
+        <div class="card-title">Read side (Query)</div>
+        <p style="font-size:.82rem;">Consumes events from the event log and builds read-optimised projections (materialised views, search indexes, caches). Optimised for reads — denormalised, fast, eventually consistent.</p>
+      </div>
+    </div>
+    <div class="callout amber">⚡ <strong>CQRS in data engineering:</strong> The write side is your operational database. The event log is Kafka. The read side is your data warehouse + BI layer. ELT IS a form of CQRS — write to operational DB, stream events to warehouse, build read-optimised models with dbt.</div>
+  </div>
+
+  <div id="eda-vs" class="tab-pane">
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Dimension</th><th>REST / RPC (synchronous)</th><th>Event-driven (asynchronous)</th></tr></thead>
+      <tbody>
+        <tr><td>Communication style</td><td>Request → wait → response</td><td>Publish event → consumer processes independently</td></tr>
+        <tr><td>Coupling</td><td>Tight — caller knows the callee</td><td>Loose — producer knows nothing about consumers</td></tr>
+        <tr><td>Scalability</td><td>Caller blocked during processing</td><td>Producer not blocked — consumers scale independently</td></tr>
+        <tr><td>Debugging</td><td>Easy — call stack is clear</td><td>Hard — trace events across services</td></tr>
+        <tr><td>Reliability</td><td>If callee is down, caller fails</td><td>Events persist in Kafka — consumers process when ready</td></tr>
+        <tr><td>Use when</td><td>Need immediate response (user login, payment confirmation)</td><td>One event → multiple consumers, high throughput, decoupling needed</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- ─── INTERVIEW PREP ─── -->
+<section id="interviews">
+  <div class="sec-label">Section 09 — Interview Prep</div>
+  <h2>How Streaming Appears in <span>Interviews</span></h2>
+
+  <h3>// Most common streaming interview questions</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Question</th><th>What they're testing</th><th>Key answer points</th></tr></thead>
+    <tbody>
+      <tr><td>"What's the difference between at-least-once and exactly-once?"</td><td>Do you understand delivery semantics and their trade-offs</td><td>At-least-once = no loss, possible duplicates. Exactly-once = idempotent producer + transactional writes + read_committed. Higher cost.</td></tr>
+      <tr><td>"How would you handle late-arriving events?"</td><td>Do you understand event time vs processing time</td><td>Watermarks to define when a window closes. Allowed lateness for a grace period. Side outputs for very late events. Always ask: how late can events realistically be?</td></tr>
+      <tr><td>"What windowing strategy would you use for fraud detection?"</td><td>Can you match window type to use case</td><td>Sliding window for rolling metrics (transactions in last 5 min). Session window for user behaviour patterns. Tumbling for periodic aggregations.</td></tr>
+      <tr><td>"Kafka vs Kinesis vs Pub/Sub — which would you choose?"</td><td>Cloud vs OSS trade-off reasoning</td><td>Kafka = most control, any cloud, self-hosted burden. Kinesis = AWS native, serverless, limited to AWS. Pub/Sub = GCP native, serverless. Pick based on cloud, team ops capacity, and whether you need Kafka's ecosystem.</td></tr>
+      <tr><td>"How do you guarantee a streaming pipeline processes each event exactly once?"</td><td>Deep understanding of exactly-once mechanics</td><td>Idempotent producers + transactional offsets + idempotent sink writes. Or: checkpoint + idempotent sink (replay is safe). Cannot achieve without idempotent sink.</td></tr>
+      <tr><td>"What is a consumer group and why does it matter?"</td><td>Kafka fundamentals</td><td>Group of consumers sharing a topic. Each partition assigned to one consumer. Enables parallelism (N partitions = N consumers max). Multiple groups = multiple independent consumers of same topic.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>// Senior signal — what to say unprompted</h3>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title" style="color:var(--warn);">Mid-level answer</div>
+      <p style="font-size:.82rem;">"I'd use Kafka and Flink for real-time processing." Picks tools without asking about latency requirements or justifying why streaming is needed over micro-batch.</p>
+    </div>
+    <div class="card hl">
+      <div class="card-title" style="color:var(--green);">Senior answer</div>
+      <p style="font-size:.82rem;">"Before choosing Kafka and Flink, I'd confirm the latency requirement is actually sub-minute — because 80% of 'real-time' needs are actually micro-batch. If it genuinely requires milliseconds, then I'd pick Flink for its native watermarks and stateful processing, and ensure exactly-once with checkpointing and an idempotent sink."</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Data Engineering Guide · <a href="data_architure.html">← Architecture</a> · <a href="datamodelling.html">← Data Modelling</a> · <a href="arch_designer.html">Architecture Designer →</a>
+</footer>
+
+<script>
+const C={blue:'#58a6ff',purple:'#bc8cff',amber:'#e3b341',green:'#3fb950',warn:'#f78166',muted:'#8b949e',surface2:'#1f2937',border:'#30363d'};
+
+// ── TABS ──
+function stab(group,id,btn){
+  document.querySelectorAll(`[id^="${group}-"]`).forEach(p=>p.classList.remove('active'));
+  document.getElementById(`${group}-${id}`).classList.add('active');
+  btn.closest('.tab-bar').querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(id==='tumbling') drawTumbling();
+  if(id==='sliding') drawSliding();
+  if(id==='session') drawSession();
+}
+
+// ── WINDOW VISUALISATIONS ──
+function drawTimeline(containerId, windows, events, windowColor, labels){
+  const container=document.getElementById(containerId);
+  if(!container)return;
+  container.innerHTML='';
+  const W=600, total=30;
+  const scale=W/total;
+
+  // axis
+  const axis=document.createElement('div');
+  axis.className='wv-axis';
+  container.appendChild(axis);
+
+  // tick marks
+  for(let t=0;t<=30;t+=5){
+    const tick=document.createElement('div');
+    tick.className='wv-tick';
+    tick.style.left=(t*scale)+'px';
+    tick.textContent=t+'m';
+    container.appendChild(tick);
+  }
+
+  // windows
+  windows.forEach((w,i)=>{
+    const wEl=document.createElement('div');
+    wEl.className='wv-window';
+    wEl.style.left=(w.start*scale)+'px';
+    wEl.style.width=((w.end-w.start)*scale)+'px';
+    wEl.style.background=windowColor;
+    container.appendChild(wEl);
+    const lEl=document.createElement('div');
+    lEl.className='wv-window-label';
+    lEl.style.left=(w.start*scale)+'px';
+    lEl.style.width=((w.end-w.start)*scale)+'px';
+    lEl.style.color=windowColor;
+    lEl.textContent=labels?labels[i]:'W'+(i+1);
+    container.appendChild(lEl);
+  });
+
+  // events
+  events.forEach(e=>{
+    const dot=document.createElement('div');
+    dot.className='wv-event';
+    dot.style.left=(e.t*scale)+'px';
+    dot.style.background=e.late?C.warn:C.blue;
+    dot.style.border='2px solid '+(e.late?C.warn:C.blue);
+    dot.title=e.label||'event at '+e.t+'m';
+    container.appendChild(dot);
+  });
+}
+
+function drawTumbling(){
+  const events=[{t:2},{t:5},{t:8},{t:11},{t:13},{t:18},{t:22},{t:25},{t:28}];
+  const windows=[{start:0,end:10},{start:10,end:20},{start:20,end:30}];
+  drawTimeline('viz-tumbling',windows,events,C.amber,['Window 1 (0–10m)','Window 2 (10–20m)','Window 3 (20–30m)']);
+}
+
+function drawSliding(){
+  const events=[{t:2},{t:5},{t:8},{t:11},{t:13},{t:18},{t:22},{t:25},{t:28}];
+  const windows=[{start:0,end:10},{start:5,end:15},{start:10,end:20},{start:15,end:25},{start:20,end:30}];
+  drawTimeline('viz-sliding',windows,events,C.purple,['W1','W2','W3','W4','W5']);
+}
+
+function drawSession(){
+  const events=[{t:2,label:'burst 1'},{t:3,label:'burst 1'},{t:4,label:'burst 1'},{t:12,label:'burst 2'},{t:13,label:'burst 2'},{t:22,label:'burst 3'},{t:24,label:'burst 3'},{t:25,label:'burst 3'},{t:26,label:'burst 3'}];
+  const windows=[{start:2,end:9},{start:12,end:18},{start:22,end:31}];
+  drawTimeline('viz-session',windows,events,C.green,['Session 1','Session 2','Session 3']);
+}
+
+// ── DELIVERY QUIZ ──
+const DQ=[
+  {scenario:'A payment processing pipeline. If an event is processed twice, a customer is charged twice.',label:'Scenario 1 / 3',
+   opts:[
+    {l:'At-most-once',correct:false,fb:'Wrong — at-most-once risks losing payment events entirely. A missed charge is also a business problem.'},
+    {l:'At-least-once',correct:false,fb:'Wrong — at-least-once risks duplicate charges. A customer charged twice is a serious business and legal problem.'},
+    {l:'Exactly-once',correct:true,fb:'Correct. Financial transactions require exactly-once semantics. Use idempotent producer + transactional writes + idempotent sink (e.g. INSERT with UNIQUE constraint).'}
+  ]},
+  {scenario:'A real-time dashboard showing approximate page view counts. Occasional duplicate events would move a counter from 1,000,002 to 1,000,003 — imperceptible to users.',label:'Scenario 2 / 3',
+   opts:[
+    {l:'At-most-once',correct:false,fb:'Possible but riskier than needed. At-least-once gives you near-accurate counts without the cost of exactly-once.'},
+    {l:'At-least-once',correct:true,fb:'Correct. Approximate analytics with acceptable duplicate tolerance — at-least-once gives you no data loss and acceptable accuracy. Much simpler than exactly-once.'},
+    {l:'Exactly-once',correct:false,fb:'Overkill here. Exactly-once has significant overhead (lower throughput, more complexity). For approximate page view counts, at-least-once is sufficient.'}
+  ]},
+  {scenario:'A fraud detection pipeline. A missed fraud event means an attack goes undetected. A duplicate event means the same transaction is checked twice (idempotent — no harm).',label:'Scenario 3 / 3',
+   opts:[
+    {l:'At-most-once',correct:false,fb:'Wrong — at-most-once risks missing fraud events. A missed fraud event has direct financial impact.'},
+    {l:'At-least-once',correct:true,fb:'Correct. Since the fraud check is idempotent (checking the same transaction twice produces the same result), at-least-once is sufficient and simpler than exactly-once. No data loss, duplicates are harmless.'},
+    {l:'Exactly-once',correct:false,fb:'Not wrong, but unnecessary here. If your sink is idempotent, at-least-once gives you the same correctness as exactly-once at lower cost. Reserve exactly-once for non-idempotent operations like financial writes.'}
+  ]}
+];
+let dqIdx=0;
+function renderDQ(){
+  const body=document.getElementById('dq-body');
+  if(dqIdx>=DQ.length){body.innerHTML=`<div style="color:var(--green);font-family:var(--mono);font-size:.82rem;padding:.5rem 0;">✓ All scenarios complete. <button class="dq-next" style="display:inline-block;margin-left:.8rem;" onclick="dqIdx=0;renderDQ()">↺ Restart</button></div>`;return;}
+  const q=DQ[dqIdx];
+  body.innerHTML=`<div class="dq-scenario"><div class="dq-label">${q.label}</div>${q.scenario}</div>
+    <div class="dq-opts">${q.opts.map((o,i)=>`<button class="dq-opt" onclick="dqAnswer(${i},this)">${o.l}</button>`).join('')}</div>
+    <div class="dq-feedback" id="dq-fb"></div>
+    <button class="dq-next" id="dq-next" onclick="dqNext()">Next scenario →</button>`;
+}
+function dqAnswer(i,btn){
+  const q=DQ[dqIdx];const o=q.opts[i];
+  document.querySelectorAll('.dq-opt').forEach(b=>b.disabled=true);
+  btn.classList.add(o.correct?'correct':'wrong');
+  if(!o.correct) document.querySelectorAll('.dq-opt')[q.opts.findIndex(x=>x.correct)].classList.add('correct');
+  const fb=document.getElementById('dq-fb');
+  fb.style.cssText=`display:block;background:${o.correct?'rgba(63,185,80,.08)':'rgba(247,129,102,.08)'};color:${o.correct?'var(--green)':'var(--warn)'};border:1px solid ${o.correct?'var(--green)':'var(--warn)'};border-radius:5px;padding:.6rem .9rem;`;
+  fb.textContent=(o.correct?'✓ ':'✗ ')+o.fb;
+  document.getElementById('dq-next').style.display='inline-block';
+}
+function dqNext(){dqIdx++;renderDQ();}
+
+// ── NAV SCROLL ──
+const navLinks=document.querySelectorAll('nav a[href^="#"]');
+window.addEventListener('scroll',()=>{
+  let cur='';
+  document.querySelectorAll('section[id]').forEach(s=>{if(window.scrollY>=s.offsetTop-80)cur=s.id;});
+  navLinks.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+cur));
+});
+
+window.addEventListener('load',()=>{
+  drawTumbling();
+  renderDQ();
+});
+</script>
+</body>
+</html>

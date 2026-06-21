@@ -189,6 +189,9 @@ footer a{color:var(--accent);text-decoration:none;}
   <a href="#denorm">Denormalization</a>
   <a href="#grain">Grain</a>
   <a href="#schemas">Schemas</a>
+  <a href="#facttypes">Fact Types</a>
+  <a href="#dimtypes">Dim Types</a>
+  <a href="#dbtconventions">dbt Conventions</a>
 </nav>
 
 <div class="hero">
@@ -636,8 +639,248 @@ order_id | customer_name | customer_city
   </div>
 </section>
 
+<!-- ─── FACT TABLE TYPES ─── -->
+<section id="facttypes">
+  <div class="sec-label">Section 10</div>
+  <h2>Fact Table <span style="color:var(--purple)">Types</span></h2>
+  <p>Not all fact tables are the same. The type of fact table you choose determines the grain, how rows accumulate over time, and what kinds of queries are possible. This is one of the most common interview topics in dimensional modelling.</p>
+
+  <div class="compare-grid" style="grid-template-columns:1fr 1fr 1fr;">
+    <div class="card active">
+      <div class="card-title">Transaction Fact</div>
+      <p style="font-size:.82rem;">One row per discrete event or transaction. The most common type. Row is inserted when the event happens and <strong>never updated</strong>. Append-only.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Examples: each sale, each click, each payment, each order line item.</p>
+      <div style="margin-top:.8rem;">
+        <span class="tag good">Simplest to build</span>
+        <span class="tag good">Append-only</span>
+        <span class="tag neutral">Most granular</span>
+      </div>
+      <pre style="margin-top:.8rem;font-size:.72rem;">fact_order_line
+─────────────────────
+order_line_sk  PK
+order_sk       FK
+product_sk     FK
+customer_sk    FK
+date_sk        FK
+quantity       measure
+unit_price     measure
+discount       measure</pre>
+    </div>
+    <div class="card active">
+      <div class="card-title">Periodic Snapshot Fact</div>
+      <p style="font-size:.82rem;">One row per entity per time period — regardless of whether anything happened. Captures the <strong>state at a point in time</strong>. Rows are inserted on a schedule (daily, weekly, monthly).</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Examples: account balance at end of day, inventory level each week, headcount each month.</p>
+      <div style="margin-top:.8rem;">
+        <span class="tag good">Shows state over time</span>
+        <span class="tag neutral">Regular cadence</span>
+        <span class="tag bad">Can be large</span>
+      </div>
+      <pre style="margin-top:.8rem;font-size:.72rem;">fact_daily_inventory
+─────────────────────
+inventory_sk   PK
+product_sk     FK
+warehouse_sk   FK
+date_sk        FK
+quantity_on_hand  measure
+reorder_point     measure
+days_of_supply    measure</pre>
+    </div>
+    <div class="card active">
+      <div class="card-title">Accumulating Snapshot Fact</div>
+      <p style="font-size:.82rem;">One row per process instance (order, claim, application) that is <strong>updated as the process moves through stages</strong>. Rows have multiple date foreign keys — one per milestone.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Examples: order fulfillment pipeline, insurance claim lifecycle, loan application stages.</p>
+      <div style="margin-top:.8rem;">
+        <span class="tag good">Shows process progress</span>
+        <span class="tag bad">Rows get updated</span>
+        <span class="tag neutral">Multiple date FKs</span>
+      </div>
+      <pre style="margin-top:.8rem;font-size:.72rem;">fact_order_fulfillment
+─────────────────────
+order_sk        PK
+customer_sk     FK
+placed_date_sk  FK  ← milestone 1
+picked_date_sk  FK  ← milestone 2
+shipped_date_sk FK  ← milestone 3
+delivered_date_sk FK ← milestone 4
+days_to_ship    measure
+days_to_deliver measure</pre>
+    </div>
+  </div>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Property</th><th>Transaction</th><th>Periodic Snapshot</th><th>Accumulating Snapshot</th></tr></thead>
+    <tbody>
+      <tr><td>Grain</td><td>One row per event</td><td>One row per entity per period</td><td>One row per process instance</td></tr>
+      <tr><td>Row lifecycle</td><td style="color:var(--accent2)">Insert only — never updated</td><td style="color:var(--accent2)">Insert on schedule — never updated</td><td style="color:var(--warn)">Inserted + updated as process advances</td></tr>
+      <tr><td>Date FKs</td><td>One (event date)</td><td>One (period date)</td><td>Multiple (one per milestone)</td></tr>
+      <tr><td>Best for</td><td>What happened? How many?</td><td>What is the current state?</td><td>How long did each stage take?</td></tr>
+      <tr><td>Example query</td><td>Total sales by product this month</td><td>Inventory level trend over 12 weeks</td><td>Average days from order to delivery</td></tr>
+      <tr><td>Kimball chapter</td><td>Most chapters</td><td>Ch. 6 — Inventory</td><td>Ch. 14 — Insurance claims</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout green">✓ <strong>Interview tip:</strong> When asked "what type of fact table would you use for X?" — ask yourself: does one event happen and it's done (transaction), does something need to be measured at regular intervals (periodic snapshot), or does an entity go through stages over time (accumulating snapshot)?</div>
+</section>
+
+<!-- ─── DIMENSION TYPES ─── -->
+<section id="dimtypes">
+  <div class="sec-label">Section 11</div>
+  <h2>Dimension <span style="color:var(--purple)">Types</span></h2>
+  <p>Dimensions come in several specialised types beyond the basic customer or product dimension. Understanding these is what separates a junior modeller from a senior one — they come up constantly in Kimball-style design.</p>
+
+  <div class="compare-grid">
+    <div class="card active">
+      <div class="card-title">Conformed Dimension</div>
+      <p style="font-size:.82rem;">A dimension <strong>shared across multiple fact tables</strong> with identical meaning. dim_date, dim_customer, dim_product used by both fact_sales and fact_returns are conformed. Enables cross-process analysis without data discrepancy.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.6rem;">Why it matters: if Sales and Finance use different dim_customer tables with different customer counts, the numbers will never agree.</p>
+      <span class="tag good">Enables drill-across queries</span><span class="tag good">Single source of truth</span>
+    </div>
+    <div class="card active">
+      <div class="card-title">Role-Playing Dimension</div>
+      <p style="font-size:.82rem;">The <strong>same physical dimension used multiple times</strong> in the same fact table for different purposes. dim_date appears as order_date, ship_date, and delivery_date — three different roles, one table.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.6rem;">Implementation: create views or aliases (vw_order_date, vw_ship_date) pointing to the same dim_date table. Do not duplicate the table.</p>
+      <span class="tag neutral">Views / aliases</span><span class="tag good">No duplication</span>
+    </div>
+    <div class="card active">
+      <div class="card-title">Junk Dimension</div>
+      <p style="font-size:.82rem;">A catch-all dimension that <strong>consolidates low-cardinality flags and indicators</strong> that don't belong in any natural dimension. Instead of 6 boolean columns on the fact table, create one junk dimension with all combinations.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.6rem;">Example: is_promotional, is_online, is_returned, payment_method, channel — all combined into dim_transaction_type.</p>
+      <span class="tag good">Cleans up fact table</span><span class="tag neutral">Low cardinality flags</span>
+    </div>
+    <div class="card active">
+      <div class="card-title">Degenerate Dimension</div>
+      <p style="font-size:.82rem;">A dimension attribute that lives <strong>directly on the fact table</strong> with no separate dimension table — because it has no other attributes. Order number, invoice number, ticket number are classic examples.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.6rem;">No separate dim table exists because there's nothing else to say about it — just the key itself used for grouping and filtering.</p>
+      <span class="tag neutral">No separate table</span><span class="tag good">Keeps model lean</span>
+    </div>
+    <div class="card active">
+      <div class="card-title">Slowly Changing Dimension (SCD)</div>
+      <p style="font-size:.82rem;">A dimension where <strong>attribute values change over time</strong> and you need to decide whether to overwrite (Type 1), track history (Type 2), or store both old and new (Type 3). The most important dimension concept in practice.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.6rem;">Full coverage in the dedicated SCD module — including DDL, DML, dbt snapshots, and a SQL playground.</p>
+      <span class="tag good">History tracking</span><a href="scd.html" style="font-family:var(--mono);font-size:.68rem;color:var(--accent);text-decoration:none;margin-left:.4rem;">→ SCD Module</a>
+    </div>
+    <div class="card active">
+      <div class="card-title">Outrigger Dimension</div>
+      <p style="font-size:.82rem;">A dimension that <strong>references another dimension</strong> — a secondary dimension hanging off a primary one. dim_product references dim_brand. Use sparingly — it adds joins and complexity. Usually better to flatten the attributes into the primary dimension.</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.6rem;">Avoid unless the referenced dimension is shared with other primary dimensions — otherwise just denormalise.</p>
+      <span class="tag bad">Adds join complexity</span><span class="tag neutral">Use sparingly</span>
+    </div>
+  </div>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Dimension Type</th><th>Key characteristic</th><th>When to use</th><th>Common mistake</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Conformed</strong></td><td>Same table, same meaning, across multiple facts</td><td>Any shared entity — date, customer, product, geography</td><td>Building separate dim_customer per subject area — they diverge immediately</td></tr>
+      <tr><td><strong>Role-playing</strong></td><td>Same table, different FK alias, same fact</td><td>Multiple date references in one fact table</td><td>Creating duplicate dim_date tables for each role — maintenance nightmare</td></tr>
+      <tr><td><strong>Junk</strong></td><td>Consolidated flags and indicators</td><td>5+ boolean/low-cardinality columns on the fact table</td><td>Leaving all flags as columns on the fact table — explodes the width</td></tr>
+      <tr><td><strong>Degenerate</strong></td><td>Dimension key lives on fact table, no dim table</td><td>Order number, invoice number — no other attributes</td><td>Creating an unnecessary dim table with only a surrogate key and the business key</td></tr>
+      <tr><td><strong>SCD Type 2</strong></td><td>Historical rows with effective/end dates</td><td>Any attribute that changes and history must be preserved</td><td>Using Type 1 (overwrite) when historical accuracy matters for reporting</td></tr>
+      <tr><td><strong>Outrigger</strong></td><td>Dimension → dimension relationship</td><td>Only when the secondary dim is truly shared</td><td>Creating outriggers for every relationship — just flatten the attributes instead</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ─── dbt MODELLING CONVENTIONS ─── -->
+<section id="dbtconventions">
+  <div class="sec-label">Section 12</div>
+  <h2>dbt Modelling <span style="color:var(--purple)">Conventions</span></h2>
+  <p>dbt has established a standard layer naming convention that maps directly to the Medallion architecture. Following it makes your project navigable for any data engineer who joins the team — it's become the industry default.</p>
+
+  <div class="callout" style="border-left-color:var(--accent2);">✓ <strong>The convention in one line:</strong> <code>sources → staging → intermediate → marts</code>. Each layer has a specific purpose, materialisation strategy, and naming pattern. Break the convention and the model becomes hard for others to understand.</div>
+
+  <div class="compare-grid" style="grid-template-columns:1fr 1fr;">
+    <div class="card active" style="border-color:var(--muted);">
+      <div class="card-title" style="color:var(--muted);">Source (not a dbt model)</div>
+      <p style="font-size:.82rem;">Raw tables from source systems declared in <code>sources.yml</code>. Not transformed — just referenced. Gives you source freshness checks and lineage tracking from the very start of the DAG.</p>
+      <pre style="font-size:.72rem;"># sources.yml
+sources:
+  - name: raw_postgres
+    tables:
+      - name: orders
+      - name: customers</pre>
+      <span class="tag neutral">Declared not built</span><span class="tag neutral">Freshness checks</span>
+    </div>
+    <div class="card active" style="border-color:var(--blue);">
+      <div class="card-title" style="color:var(--accent);">Staging (stg_)</div>
+      <p style="font-size:.82rem;">One-to-one with source tables. <strong>Clean but don't join.</strong> Rename columns to standard naming conventions, cast data types, apply basic filters, coalesce nulls. Nothing business-logic-specific here.</p>
+      <pre style="font-size:.72rem;">-- models/staging/stg_orders.sql
+SELECT
+  id            AS order_id,
+  customer_id,
+  created_at    AS ordered_at,
+  status::text  AS order_status,
+  amount / 100.0 AS amount_usd
+FROM {{ source('raw_postgres','orders') }}</pre>
+      <span class="tag good">1:1 with source</span><span class="tag good">No joins</span><span class="tag neutral">Materialise: view</span>
+    </div>
+    <div class="card active" style="border-color:var(--purple);">
+      <div class="card-title">Intermediate (int_)</div>
+      <p style="font-size:.82rem;">Business logic that doesn't belong in staging or marts. Joins between staging models, deduplication, complex transformations, pivots. <strong>Not exposed to end users</strong> — building blocks only.</p>
+      <pre style="font-size:.72rem;">-- models/intermediate/int_orders_with_customers.sql
+SELECT
+  o.order_id,
+  o.ordered_at,
+  o.amount_usd,
+  c.customer_name,
+  c.customer_segment
+FROM {{ ref('stg_orders') }} o
+LEFT JOIN {{ ref('stg_customers') }} c
+  ON o.customer_id = c.customer_id</pre>
+      <span class="tag neutral">Joins allowed</span><span class="tag neutral">Not user-facing</span><span class="tag neutral">Materialise: view or ephemeral</span>
+    </div>
+    <div class="card active" style="border-color:var(--accent2);">
+      <div class="card-title" style="color:var(--accent2);">Marts (fct_ / dim_)</div>
+      <p style="font-size:.82rem;">Business-facing output. Fact tables (<code>fct_</code>) and dimension tables (<code>dim_</code>) that analysts and BI tools query directly. Optimised for read performance. Well-documented. This is the Gold layer.</p>
+      <pre style="font-size:.72rem;">-- models/marts/fct_orders.sql
+SELECT
+  order_id,
+  ordered_at,
+  customer_id,
+  amount_usd,
+  DATEDIFF('day', ordered_at, shipped_at)
+    AS days_to_ship
+FROM {{ ref('int_orders_with_customers') }}
+
+-- models/marts/dim_customers.sql
+SELECT
+  customer_id,
+  customer_name,
+  customer_segment,
+  first_order_at,
+  lifetime_orders
+FROM {{ ref('int_customer_summary') }}</pre>
+      <span class="tag good">User-facing</span><span class="tag good">fct_ and dim_ prefix</span><span class="tag neutral">Materialise: table</span>
+    </div>
+  </div>
+
+  <h3>// Materialisation strategy per layer</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Layer</th><th>Default materialisation</th><th>Why</th><th>Exception</th></tr></thead>
+    <tbody>
+      <tr><td><code>stg_</code></td><td><strong>view</strong></td><td>No storage cost. Always reflects latest source data. Cheap to query since marts do the heavy lifting.</td><td>Use table if source system is slow to query directly</td></tr>
+      <tr><td><code>int_</code></td><td><strong>view or ephemeral</strong></td><td>Ephemeral = compiled inline into the mart, no physical table. View = physical but no data stored. Both avoid storage cost for intermediate steps.</td><td>Use table if the intermediate is reused by many downstream models</td></tr>
+      <tr><td><code>fct_</code></td><td><strong>table (incremental)</strong></td><td>Analysts query these. Must be fast. Incremental means only new/changed rows are reprocessed — not the full table every run.</td><td>Small fact tables can be full table refresh</td></tr>
+      <tr><td><code>dim_</code></td><td><strong>table</strong></td><td>Dimensions are joined constantly. Must be materialised for performance. Usually small enough for full refresh.</td><td>SCD Type 2 dims use dbt snapshots instead</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>// Naming conventions</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Layer</th><th>Prefix</th><th>Folder</th><th>Example</th></tr></thead>
+    <tbody>
+      <tr><td>Staging</td><td><code>stg_</code></td><td><code>models/staging/</code></td><td><code>stg_orders.sql</code>, <code>stg_customers.sql</code></td></tr>
+      <tr><td>Intermediate</td><td><code>int_</code></td><td><code>models/intermediate/</code></td><td><code>int_orders_enriched.sql</code></td></tr>
+      <tr><td>Fact marts</td><td><code>fct_</code></td><td><code>models/marts/</code></td><td><code>fct_orders.sql</code>, <code>fct_sessions.sql</code></td></tr>
+      <tr><td>Dimension marts</td><td><code>dim_</code></td><td><code>models/marts/</code></td><td><code>dim_customers.sql</code>, <code>dim_products.sql</code></td></tr>
+      <tr><td>Snapshots (SCD2)</td><td><code>scd_</code> or source name</td><td><code>snapshots/</code></td><td><code>customers_snapshot.sql</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout warn">⚠ <strong>The most common dbt mistake:</strong> Putting joins and business logic in staging models. Staging should be a transparent, 1:1 translation of the source — nothing more. All business logic belongs in intermediate or mart models where it's easier to test and maintain.</div>
+</section>
+
 <footer>
-  Built for learning · Data Engineering Guide · <a href="scd.html">← SCD Module</a>
+  Built for learning · Data Engineering Guide · <a href="scd.html">← SCD Module</a> · <a href="data_architure.html">Architecture →</a>
 </footer>
 
 <script>
